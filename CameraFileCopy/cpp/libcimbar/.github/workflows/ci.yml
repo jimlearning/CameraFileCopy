@@ -1,0 +1,63 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - name: "linux gcc9"
+          os: ubuntu-20.04
+          env: CXX="g++-9" CC="gcc-9"
+
+        - name: "linux gcc-latest"
+          os: ubuntu-latest
+
+        - name: "linux clang"
+          os: ubuntu-20.04
+          env: CXX="clang++" CC="clang"
+          extra-packages: "clang"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install libopencv-dev libglfw3-dev libgles2-mesa-dev ${{ matrix.config.extra-packages }}
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      working-directory: ${{runner.workspace}}/build
+      run: ${{ matrix.config.env }} cmake $GITHUB_WORKSPACE
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      run: make -j2 && make install
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      run: make test CTEST_OUTPUT_ON_FAILURE=TRUE
+
+    - name: Usage test
+      working-directory: ${{runner.workspace}}/libcimbar/test/py
+      run: python3 -m unittest
+
+  cppcheck:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt-get install cppcheck
+
+    - name: run cppcheck
+      run: cppcheck src/
+
