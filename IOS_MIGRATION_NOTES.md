@@ -413,12 +413,76 @@ add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
 
 - 状态: 进行中
 - 已完成:
+  - 在主 CMakeLists.txt 中实现全局测试目录跳过机制
   - 修改libcorrect库的CMakeLists.txt，在iOS平台上跳过测试代码构建
   - 为iOS平台添加libfec函数的空实现，解决编译错误
 - 计划:
   - 使用条件编译为fec.h等缺失依赖提供替代实现
   - 确保所有第三方库在iOS平台上正确编译
   - 解决其他依赖库的特定问题
+
+#### 全局测试目录跳过机制
+
+为了统一处理项目中的所有测试目录，我们在主 CMakeLists.txt 中实现了智能跳过机制：
+
+1. 全局属性设置
+
+```cmake
+# 设置全局属性，以禁用所有测试
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(IOS_PLATFORM TRUE)
+    message(STATUS "Building for iOS platform - tests will be disabled")
+    set_property(GLOBAL PROPERTY IOS_DISABLE_TESTS TRUE)
+else()
+    set(IOS_PLATFORM FALSE)
+endif()
+```
+
+2. 自定义目录添加函数
+
+```cmake
+# 自定义函数，用于有条件地添加子目录
+function(add_subdirectory_with_options dir binary_dir)
+    # 检查目录名是否包含 "test" 或 "tests"
+    string(REGEX MATCH "test[s]?$" is_test_dir "${dir}")
+    
+    # 获取全局属性
+    get_property(disable_tests GLOBAL PROPERTY IOS_DISABLE_TESTS)
+    
+    # 如果是测试目录且在iOS平台上，则跳过
+    if(is_test_dir AND disable_tests)
+        message(STATUS "Skipping test directory on iOS platform: ${dir}")
+    else()
+        add_subdirectory(${dir} ${binary_dir})
+    endif()
+endfunction()
+```
+
+3. 项目循环智能处理
+
+```cmake
+# 使用自定义函数添加子目录
+foreach(proj ${PROJECTS})
+    # 检查项目本身是否包含 "test" 或 "tests"
+    string(REGEX MATCH "test[s]?$" is_test_proj "${proj}")
+    get_property(disable_tests GLOBAL PROPERTY IOS_DISABLE_TESTS)
+    
+    if(is_test_proj AND disable_tests)
+        message(STATUS "Skipping test project on iOS platform: ${proj}")
+    else()
+        # 正常添加非测试项目
+        add_subdirectory(${proj} build/${proj})
+    endif()
+endforeach()
+```
+
+这种方法的优势：
+
+- 统一处理：一次解决所有测试目录问题，不需要在每个子项目中进行修改
+- 自动识别：自动检测目录名中包含“test”或“tests”的项目，不需要手动列出
+- 透明日志：构建过程中会显示哪些测试目录被跳过，便于调试
+- 灵活切换：只在iOS平台上禁用测试，其他平台保持原有行为
+- 零侵入性：不需要修改任何测试代码，只在构建系统级别解决问题
 
 4. 测试核心功能
 

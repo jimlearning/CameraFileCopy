@@ -10,7 +10,9 @@ set(CMAKE_CXX_STANDARD 17)
 # 检测iOS平台
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(IOS_PLATFORM TRUE)
-    message(STATUS "Building for iOS platform")
+    message(STATUS "Building for iOS platform - tests will be disabled")
+    # 设置全局属性，以禁用所有测试
+    set_property(GLOBAL PROPERTY IOS_DISABLE_TESTS TRUE)
 else()
     set(IOS_PLATFORM FALSE)
 endif()
@@ -78,6 +80,32 @@ include_directories(
 	${OpenCV_INCLUDE_DIRS}
 )
 
+# 自定义函数，用于有条件地添加子目录
+function(add_subdirectory_with_options dir binary_dir)
+    # 检查目录名是否包含 "test" 或 "tests"
+    string(REGEX MATCH "test[s]?$" is_test_dir "${dir}")
+    
+    # 获取全局属性
+    get_property(disable_tests GLOBAL PROPERTY IOS_DISABLE_TESTS)
+    
+    # 如果是测试目录且在iOS平台上，则跳过
+    if(is_test_dir AND disable_tests)
+        message(STATUS "Skipping test directory on iOS platform: ${dir}")
+    else()
+        add_subdirectory(${dir} ${binary_dir})
+    endif()
+endfunction()
+
+# 使用自定义函数添加子目录
 foreach(proj ${PROJECTS})
-	add_subdirectory(${proj} build/${proj})
+    # 检查项目本身是否包含 "test" 或 "tests"
+    string(REGEX MATCH "test[s]?$" is_test_proj "${proj}")
+    get_property(disable_tests GLOBAL PROPERTY IOS_DISABLE_TESTS)
+    
+    if(is_test_proj AND disable_tests)
+        message(STATUS "Skipping test project on iOS platform: ${proj}")
+    else()
+        # 正常添加非测试项目
+        add_subdirectory(${proj} build/${proj})
+    endif()
 endforeach()
