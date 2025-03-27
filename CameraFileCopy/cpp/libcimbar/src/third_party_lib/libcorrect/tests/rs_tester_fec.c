@@ -1,4 +1,8 @@
 #include "rs_tester_fec.h"
+
+// 只在非iOS平台上提供函数实现
+#ifndef CIMBAR_IOS_PLATFORM
+
 void rs_fec_encode(void *encoder, uint8_t *msg, size_t msg_length,
                    uint8_t *msg_out) {
     // XXX make sure that pad length used to build encoder corresponds to this
@@ -28,3 +32,5 @@ void rs_fec_decode(void *decoder, uint8_t *encoded, size_t encoded_length,
     }
     memcpy(msg, encoded, encoded_length - num_roots);
 }
+
+#endif // CIMBAR_IOS_PLATFORM

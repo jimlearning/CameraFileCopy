@@ -46,6 +46,7 @@
 ### 实现步骤
 
 1. 创建符号链接结构：
+
 ```bash
 mkdir -p ios_includes
 cd ios_includes
@@ -54,6 +55,7 @@ ln -s ../src/third_party_lib third_party_lib
 ```
 
 2. 修改CMakeLists.txt配置：
+
 ```cmake
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(IOS_PLATFORM TRUE)
@@ -85,12 +87,14 @@ include_directories(
 ```
 
 3. 修改子项目CMakeLists.txt：
+
 ```cmake
 # 使用target_include_directories而非全局include_directories
 target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
 ```
 
 4. 项目根目录宏定义：
+
 ```cmake
 # 定义项目根目录宏，用于测试代码和样本文件定位
 add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
@@ -99,12 +103,14 @@ add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
 ### 优势与注意事项
 
 **优势**：
+
 - 保持源代码的包含语句简洁一致
 - 避免逐个修改每个文件的相对路径
 - 与CMake和Xcode集成自然
 - 可扩展性好，便于添加新的第三方库
 
 **注意事项**：
+
 - 新增第三方库时需更新符号链接
 - 编译前确保符号链接存在且有效
 - 团队开发时所有成员需遵循此结构
@@ -406,10 +412,13 @@ add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
 3. 解决平台特定库依赖问题
 
 - 状态: 进行中
+- 已完成:
+  - 修改libcorrect库的CMakeLists.txt，在iOS平台上跳过测试代码构建
+  - 为iOS平台添加libfec函数的空实现，解决编译错误
 - 计划:
   - 使用条件编译为fec.h等缺失依赖提供替代实现
   - 确保所有第三方库在iOS平台上正确编译
-  - 解决libcorrect等依赖库的特定问题
+  - 解决其他依赖库的特定问题
 
 4. 测试核心功能
 

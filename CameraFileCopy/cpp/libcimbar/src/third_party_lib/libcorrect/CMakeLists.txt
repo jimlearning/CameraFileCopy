@@ -6,6 +6,13 @@ include(CheckCSourceCompiles)
 include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 
+# 检测iOS平台
+set(CIMBAR_IOS_PLATFORM FALSE)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR DEFINED IOS_PLATFORM)
+    set(CIMBAR_IOS_PLATFORM TRUE)
+    message(STATUS "Building for iOS platform - tests will be disabled")
+endif()
+
 find_library(FEC fec)
 CHECK_LIBRARY_EXISTS(FEC dotprod "" HAVE_LIBFEC)
 
@@ -35,6 +42,11 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(src)
+
+# 仅在非iOS平台上构建测试
+if(NOT CIMBAR_IOS_PLATFORM)
+    add_subdirectory(tests)
+endif()
 
 set(INSTALL_HEADERS "${PROJECT_BINARY_DIR}/include/correct.h")
 
