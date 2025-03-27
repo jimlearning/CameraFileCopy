@@ -14,6 +14,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # 设置全局属性，以禁用所有测试
     set_property(GLOBAL PROPERTY IOS_DISABLE_TESTS TRUE)
     
+    # 添加iOS平台兼容性目录到包含路径
+    message(STATUS "Adding iOS-specific compatibility include directory")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ios_includes)
+    
+    # 添加iOS平台兼容性源文件
+    message(STATUS "Adding iOS platform compatibility implementation files")
+    set(IOS_COMPAT_SRC
+        ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/fec.c
+    )
+
+    # 创建兼容性静态库
+    add_library(ios_compat STATIC ${IOS_COMPAT_SRC})
+    
     # 创建特定平台的源文件排除列表，避免编译 libcorrect 工具目录下的文件
     message(STATUS "Excluding libcorrect tools source files from compilation on iOS platform")
     set_source_files_properties(
@@ -23,6 +36,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_rs_primitive_poly.c
         PROPERTIES HEADER_FILE_ONLY TRUE
     )
+    
+    # 定义平台特定的编译宏
+    add_definitions(-DCIMBAR_IOS_PLATFORM)
 else()
     set(IOS_PLATFORM FALSE)
 endif()
