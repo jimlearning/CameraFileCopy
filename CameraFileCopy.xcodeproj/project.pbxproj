@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		384D86D72D946C54001600E7 /* CMakeLists.txt in Resources */ = {isa = PBXBuildFile; fileRef = 384D86D62D946C54001600E7 /* CMakeLists.txt */; };
 		38C0AC6E2D941D6700425DA5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC6D2D941D6700425DA5 /* AppDelegate.m */; };
 		38C0AC712D941D6700425DA5 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC702D941D6700425DA5 /* SceneDelegate.m */; };
 		38C0AC742D941D6700425DA5 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC732D941D6700425DA5 /* ViewController.mm */; };
@@ -205,6 +206,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		384D86D62D946C54001600E7 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		38C0AC692D941D6700425DA5 /* CameraFileCopy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CameraFileCopy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		38C0AC6C2D941D6700425DA5 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		38C0AC6D2D941D6700425DA5 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -1643,6 +1645,7 @@
 				38C0AE572D9424C200425DA5 /* test */,
 				38C0AE5F2D9424C200425DA5 /* web */,
 				38C0AE632D9424C200425DA5 /* DETAILS.md */,
+				384D86D62D946C54001600E7 /* CMakeLists.txt */,
 				38C0AE642D9424C200425DA5 /* LICENSE */,
 				38C0AE652D9424C200425DA5 /* package-cimbar-html.py */,
 				38C0AE662D9424C200425DA5 /* package-portable-linux.sh */,
@@ -1762,6 +1765,7 @@
 				38C0AF6A2D9424C200425DA5 /* PERFORMANCE.md in Resources */,
 				38C0AE7F2D9424C200425DA5 /* 01.png in Resources */,
 				38C0AE782D9424C200425DA5 /* 00.png in Resources */,
+				384D86D72D946C54001600E7 /* CMakeLists.txt in Resources */,
 				38C0AE842D9424C200425DA5 /* 06.png in Resources */,
 				38C0AE7D2D9424C200425DA5 /* 0e.png in Resources */,
 				38C0AE872D9424C200425DA5 /* 09.png in Resources */,
@@ -2143,6 +2147,7 @@
 				DEVELOPMENT_TEAM = KH4728P4N3;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/CameraFileCopy/cpp/libcimbar/ios_includes/**";
 				INFOPLIST_FILE = CameraFileCopy/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -2174,6 +2179,7 @@
 				DEVELOPMENT_TEAM = KH4728P4N3;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/CameraFileCopy/cpp/libcimbar/ios_includes/**";
 				INFOPLIST_FILE = CameraFileCopy/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;

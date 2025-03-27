@@ -1,7 +1,7 @@
 /* This code is subject to the terms of the Mozilla Public License, v.2.0. http://mozilla.org/MPL/2.0/. */
 #pragma once
 
-#include "../../third_party_lib/zstd/zstd.h"
+#include "zstd/zstd.h"
 #include <array>
 #include <fstream>
 #include <iostream>

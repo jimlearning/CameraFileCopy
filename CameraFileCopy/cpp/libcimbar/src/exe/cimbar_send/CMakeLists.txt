@@ -3,10 +3,13 @@ cmake_minimum_required(VERSION 3.10)
 project(cimbar_send)
 
 # 添加额外的包含路径
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party_lib
-)
+# include_directories(
+#     ${CMAKE_CURRENT_SOURCE_DIR}/../../lib
+#     ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party_lib
+# )
+
+# 替换为target_include_directories
+target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
 
 set (SOURCES
 	send.cpp

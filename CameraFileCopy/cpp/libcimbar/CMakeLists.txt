@@ -15,6 +15,10 @@ else()
     set(IOS_PLATFORM FALSE)
 endif()
 
+# 定义项目根目录宏，用于测试代码和样本文件定位
+add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
+message(STATUS "Setting LIBCIMBAR_PROJECT_ROOT to: ${libcimbar_SOURCE_DIR}")
+
 # 确保我们接收父项目传递的OpenCV_INCLUDE_DIRS变量
 if(DEFINED OpenCV_INCLUDE_DIRS)
 	message(STATUS "Using OpenCV include dirs from parent: ${OpenCV_INCLUDE_DIRS}")

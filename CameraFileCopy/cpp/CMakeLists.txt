@@ -5,13 +5,34 @@ project(cfc)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 检测iOS平台
+# 在检测iOS平台的条件块之后添加
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(IOS_PLATFORM TRUE)
     message(STATUS "Building for iOS platform")
+    
+    # iOS平台特定的包含路径设置
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/ios_includes
+    )
+    
+    # 设置Xcode特定属性
+    set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
 else()
     set(IOS_PLATFORM FALSE)
+    message(STATUS "Building for non-iOS platform")
+    
+    # 非iOS平台的包含路径保持不变
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/src/lib
+        ${libcimbar_SOURCE_DIR}/src/third_party_lib
+    )
 endif()
+
+# 对所有子项目使用相同的包含路径
+include_directories(
+    ${GLOBAL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+)
 
 # OpenCV配置 - 强化配置以确保所有子项目都能找到OpenCV
 set(OpenCV_FOUND TRUE)
