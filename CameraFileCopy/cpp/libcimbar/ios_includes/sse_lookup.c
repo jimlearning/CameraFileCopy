@@ -27,33 +27,34 @@ quad_lookup_t quad_lookup_create(unsigned int rate,
 }
 
 void quad_lookup_destroy(quad_lookup_t quads) {
-    // 空实现
+    // 空实现 - 不需要释放内存因为我们未分配任何内存
 }
 
 void quad_lookup_fill_distance(quad_lookup_t quads, distance_t *distances) {
     // 空实现
 }
 
-distance_oct_key_t oct_lookup_find_key(output_oct_t *outputs, output_oct_t out, size_t num_keys) {
+// 注意：在iOS上提供一个简单的空实现，不进行实际查找
+unsigned int oct_lookup_find_key(unsigned int *outputs, unsigned int out, size_t num_keys) {
     return 0;  // 返回默认值
 }
 
 oct_lookup_t oct_lookup_create(unsigned int rate,
                               unsigned int order,
                               const unsigned int *table) {
-    oct_lookup_t octs = NULL;
+    oct_lookup_t octs;
+    octs.keys = NULL;
+    octs.outputs = NULL;
     return octs;
 }
 
 void oct_lookup_destroy(oct_lookup_t octs) {
-    // 空实现
+    // 空实现 - 不需要释放内存因为我们未分配任何内存
 }
 
 void oct_lookup_fill_distance(oct_lookup_t octs, distance_t *distances) {
     // 空实现
 }
-
-// 其他必要函数的空实现...
 
 #ifdef __cplusplus
 }

@@ -29,7 +29,7 @@ typedef struct correct_convolutional correct_convolutional;
 correct_convolutional *correct_convolutional_create(size_t rate, size_t order, const polynomial_t *poly);
 void correct_convolutional_destroy(correct_convolutional *conv);
 size_t correct_convolutional_encode_len(correct_convolutional *conv, size_t msg_len);
-ssize_t correct_convolutional_encode(correct_convolutional *conv, const uint8_t *msg, size_t msg_len, uint8_t *encoded);
+size_t correct_convolutional_encode(correct_convolutional *conv, const uint8_t *msg, size_t msg_len, uint8_t *encoded);
 ssize_t correct_convolutional_decode(correct_convolutional *conv, const uint8_t *encoded, size_t encoded_len, uint8_t *msg);
 
 // 软判决解码函数声明

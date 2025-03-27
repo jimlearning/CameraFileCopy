@@ -41,7 +41,7 @@ size_t correct_convolutional_encode(correct_convolutional *conv,
         // we do direct lookup of our convolutional output here
         // all of the bits from this convolution are stored in this row
         unsigned int out = conv->table[shiftregister];
-        bit_writer_write(conv->bit_writer, out, conv->rate);
+        bit_writer_write(conv->bit_writer, out, (unsigned int)conv->rate);
     }
 
     // now flush the shiftregister
@@ -51,7 +51,7 @@ size_t correct_convolutional_encode(correct_convolutional *conv,
         shiftregister <<= 1;
         shiftregister &= shiftmask;
         unsigned int out = conv->table[shiftregister];
-        bit_writer_write(conv->bit_writer, out, conv->rate);
+        bit_writer_write(conv->bit_writer, out, (unsigned int)conv->rate);
     }
 
     // 0-fill any remaining bits on our final byte

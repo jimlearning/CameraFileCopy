@@ -23,6 +23,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(IOS_COMPAT_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/fec.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/sse_lookup.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/correct/convolutional/history_buffer.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/correct/convolutional/error_buffer.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/correct/convolutional/lookup.c
     )
 
     # 创建兼容性静态库
@@ -47,6 +50,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly_annealing.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_rs_primitive_poly.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/src/convolutional/history_buffer.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/src/convolutional/error_buffer.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/src/convolutional/lookup.c
         ${SSE_SOURCE_FILES}
         PROPERTIES HEADER_FILE_ONLY TRUE
     )

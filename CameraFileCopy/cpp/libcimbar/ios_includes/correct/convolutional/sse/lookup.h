@@ -9,14 +9,31 @@
 // 前向声明
 #ifdef CIMBAR_IOS_PLATFORM
 // 为iOS平台定义必要的类型
+
+// 基本类型定义
+typedef uint64_t output_oct_t;
+typedef unsigned int distance_oct_key_t;
+typedef unsigned int output_quad_t;
+typedef uint64_t distance_quad_t;
+typedef unsigned int distance_pair_t;
+
+// 为兼容层实现的核心类型
 typedef struct {
     unsigned int *keys;
     unsigned int *outputs;
+    unsigned int output_mask;
+    unsigned int output_width;
+    size_t outputs_len;
+    distance_quad_t **distances;
 } quad_lookup_t;
 
 typedef struct {
-    unsigned int *keys;
-    unsigned int *outputs;
+    distance_oct_key_t *keys;
+    output_oct_t *outputs;
+    unsigned int output_mask;
+    unsigned int output_width;
+    size_t outputs_len;
+    uint64_t *distances;
 } oct_lookup_t;
 
 // 函数声明 - iOS上这些将是空实现
