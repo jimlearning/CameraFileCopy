@@ -1,12 +1,16 @@
 #include "correct/convolutional/history_buffer.h"
 
-#ifdef CIMBAR_IOS_PLATFORM
-// iOS平台上提供的prefetch函数空实现
+// 定义CIMBAR_IOS_PLATFORM确保所有iOS兼容代码生效
+#ifndef CIMBAR_IOS_PLATFORM
+#define CIMBAR_IOS_PLATFORM
+#endif
+
+// 为所有平台提供的prefetch函数实现
+// 在iOS上是空实现，在其他平台上可以调用平台特定指令
 static inline void prefetch(void *ptr) {
-    // iOS平台不使用prefetch指令，这是一个空实现
+    // 在iOS平台上只是一个空实现
     (void)ptr;  // 避免未使用参数警告
 }
-#endif
 
 history_buffer *history_buffer_create(unsigned int min_traceback_length,
                                       unsigned int traceback_group_length,

@@ -1,5 +1,6 @@
 // 为iOS平台完全禁用此文件
-#if !defined(CIMBAR_IOS_PLATFORM) && !defined(IOS_PLATFORM)
+// 加强条件编译保护，确保在iOS编译时完全跳过此文件
+#if !defined(CIMBAR_IOS_PLATFORM) && !defined(IOS_PLATFORM) && !defined(__APPLE__)
 
 #include "correct/convolutional/sse/lookup.h"
 

@@ -6,9 +6,8 @@
 
 // iOS平台兼容性定义 - 提供足够的类型兼容性
 
-// 前向声明
-#ifdef CIMBAR_IOS_PLATFORM
-// 为iOS平台定义必要的类型
+// 定义所有平台都需要的类型
+// 不使用条件编译，确保兼容性
 
 // 基本类型定义
 typedef uint64_t output_oct_t;
@@ -17,7 +16,7 @@ typedef unsigned int output_quad_t;
 typedef uint64_t distance_quad_t;
 typedef unsigned int distance_pair_t;
 
-// 为兼容层实现的核心类型
+// 完整的结构体定义，包含所有必要成员
 typedef struct {
     unsigned int *keys;
     unsigned int *outputs;
@@ -36,22 +35,12 @@ typedef struct {
     uint64_t *distances;
 } oct_lookup_t;
 
-// 函数声明 - iOS上这些将是空实现
+// 函数声明 - 在iOS兼容层中会提供空实现
 quad_lookup_t quad_lookup_create(unsigned int rate, unsigned int order, const unsigned int *table);
 void quad_lookup_destroy(quad_lookup_t quads);
+void quad_lookup_fill_distance(quad_lookup_t quads, distance_t *distances);
 oct_lookup_t oct_lookup_create(unsigned int rate, unsigned int order, const unsigned int *table);
 void oct_lookup_destroy(oct_lookup_t octs);
-#else
-// 不在iOS平台上，使用原始声明
-typedef struct {
-    unsigned int *keys;
-    unsigned int *outputs;
-} quad_lookup_t;
-
-typedef struct {
-    unsigned int *keys;
-    unsigned int *outputs;
-} oct_lookup_t;
-#endif
+distance_oct_key_t oct_lookup_find_key(unsigned int *outputs, unsigned int out, size_t num_keys);
 
 #endif // CORRECT_CONVOLUTIONAL_SSE_LOOKUP_H
