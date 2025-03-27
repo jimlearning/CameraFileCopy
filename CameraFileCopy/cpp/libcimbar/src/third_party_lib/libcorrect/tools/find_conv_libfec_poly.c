@@ -1,3 +1,23 @@
+/**
+ * find_conv_libfec_poly.c - Convolutional code compatibility with libfec
+ * 
+ * Platform-specific implementation: iOS vs non-iOS
+ */
+
+// iOS平台上的实现
+#if defined(__APPLE__) && defined(__arm64__)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv) {
+    printf("This tool is not available on iOS platform\n");
+    return 0;
+}
+
+#else
+// 非iOS平台的完整实现
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -277,3 +297,5 @@ int main() {
 
     return 0;
 }
+
+#endif

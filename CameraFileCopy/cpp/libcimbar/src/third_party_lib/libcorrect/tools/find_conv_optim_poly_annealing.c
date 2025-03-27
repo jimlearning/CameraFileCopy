@@ -1,3 +1,23 @@
+/**
+ * find_conv_optim_poly_annealing.c - Convolutional code optimization tool
+ * 
+ * Platform-specific implementation: iOS vs non-iOS
+ */
+
+// iOS平台上的实现
+#if defined(__APPLE__) && defined(__arm64__)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv) {
+    printf("This tool is not available on iOS platform\n");
+    return 0;
+}
+
+#else
+// 非iOS平台的完整实现
+
 #include <stdbool.h>
 #include <float.h>
 #include <math.h>
@@ -27,6 +47,8 @@ static size_t(*conv_enclen)(void *, size_t) = conv_correct_enclen;
 static void(*conv_encode)(void *, uint8_t *, size_t, uint8_t *) = conv_correct_encode;
 static void(*conv_decode)(void *, uint8_t *, size_t, uint8_t *) = conv_correct_decode;
 #endif
+
+
 
 typedef struct {
     conv_t *conv;
@@ -348,3 +370,5 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
+#endif

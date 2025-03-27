@@ -1,3 +1,23 @@
+/**
+ * find_rs_primitive_poly.c - Reed-Solomon primitive polynomial finder
+ * 
+ * Platform-specific implementation: iOS vs non-iOS
+ */
+
+// iOS平台上的实现
+#if defined(__APPLE__) && defined(__arm64__)
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char **argv) {
+    printf("This tool is not available on iOS platform\n");
+    return 0;
+}
+
+#else
+// 非iOS平台的完整实现
+
 #include "correct/reed-solomon.h"
 
 size_t block_size = 255;
@@ -49,3 +69,5 @@ int main() {
     free(log);
     return 0;
 }
+
+#endif

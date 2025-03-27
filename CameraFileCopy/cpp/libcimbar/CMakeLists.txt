@@ -13,6 +13,16 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     message(STATUS "Building for iOS platform - tests will be disabled")
     # 设置全局属性，以禁用所有测试
     set_property(GLOBAL PROPERTY IOS_DISABLE_TESTS TRUE)
+    
+    # 创建特定平台的源文件排除列表，避免编译 libcorrect 工具目录下的文件
+    message(STATUS "Excluding libcorrect tools source files from compilation on iOS platform")
+    set_source_files_properties(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_libfec_poly.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly_annealing.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_rs_primitive_poly.c
+        PROPERTIES HEADER_FILE_ONLY TRUE
+    )
 else()
     set(IOS_PLATFORM FALSE)
 endif()

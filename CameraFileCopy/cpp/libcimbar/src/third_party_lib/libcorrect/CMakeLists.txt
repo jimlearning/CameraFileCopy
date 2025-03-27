@@ -52,9 +52,12 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(src)
 
-# 仅在非iOS平台上构建测试
-if(NOT CIMBAR_IOS_PLATFORM)
+# 仅在非iOS平台上构建测试和工具
+if(NOT IOS_PLATFORM)
     add_subdirectory(tests)
+    add_subdirectory(tools)
+else()
+    message(STATUS "Skipping libcorrect tests and tools on iOS platform")
 endif()
 
 set(INSTALL_HEADERS "${PROJECT_BINARY_DIR}/include/correct.h")
