@@ -6,6 +6,109 @@
 - 目标: 将 libcimbar 库从 Linux/Android 平台成功移植到 iOS 平台
 - 主要挑战: 解决平台特定代码依赖，确保跨平台兼容性
 
+## iOS 集成指南
+
+### 包含路径管理
+
+本项目使用集中管理的包含路径方法，通过以下步骤实现：
+
+1. 所有包含头文件应使用标准格式：`#include "module/header.h"`，不使用相对路径
+2. 集中的包含目录位于`ios_includes`，包含指向各模块的符号链接
+3. CMake构建系统会自动处理iOS平台上的包含路径配置
+4. 如需添加新的第三方库，请更新符号链接结构
+
+这种方法的优势：
+
+- 保持源代码的包含语句简洁一致
+- 避免为每个文件修改相对路径
+- 与CMake和Xcode的集成自然
+- 可扩展性好，便于添加新的第三方库
+
+需要注意的事项：
+
+- 如果有新的第三方库添加，需要更新符号链接
+- 编译时需确保符号链接存在且有效
+- 在团队开发中，需要确保所有成员理解并遵循这一结构
+
+这个方案符合我们的整体移植策略：保留所有功能、提供平台特定实现、保持API一致性，同时解决了重复修改包含路径的繁琐问题。
+
+## 包含路径管理方案
+
+为了解决多个C++库相互依赖时的头文件包含问题，我们实现了一种统一管理包含路径的解决方案：
+
+### 方案设计
+
+1. 所有包含头文件使用标准格式：`#include "module/header.h"`，不使用相对路径
+2. 创建集中的包含目录位于`ios_includes`，包含指向各模块的符号链接
+3. 使用CMake条件编译区分平台，自动处理包含路径配置
+4. 修改CMakeLists.txt，使用target_include_directories而非全局include_directories
+
+### 实现步骤
+
+1. 创建符号链接结构：
+```bash
+mkdir -p ios_includes
+cd ios_includes
+ln -s ../src/lib lib
+ln -s ../src/third_party_lib third_party_lib
+```
+
+2. 修改CMakeLists.txt配置：
+```cmake
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(IOS_PLATFORM TRUE)
+    message(STATUS "Building for iOS platform")
+    
+    # iOS平台特定的包含路径设置
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/ios_includes
+    )
+    
+    # 设置Xcode特定属性
+    set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
+else()
+    set(IOS_PLATFORM FALSE)
+    message(STATUS "Building for non-iOS platform")
+    
+    # 非iOS平台的包含路径保持不变
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/src/lib
+        ${libcimbar_SOURCE_DIR}/src/third_party_lib
+    )
+endif()
+
+# 对所有子项目使用相同的包含路径
+include_directories(
+    ${GLOBAL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+)
+```
+
+3. 修改子项目CMakeLists.txt：
+```cmake
+# 使用target_include_directories而非全局include_directories
+target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
+```
+
+4. 项目根目录宏定义：
+```cmake
+# 定义项目根目录宏，用于测试代码和样本文件定位
+add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
+```
+
+### 优势与注意事项
+
+**优势**：
+- 保持源代码的包含语句简洁一致
+- 避免逐个修改每个文件的相对路径
+- 与CMake和Xcode集成自然
+- 可扩展性好，便于添加新的第三方库
+
+**注意事项**：
+- 新增第三方库时需更新符号链接
+- 编译前确保符号链接存在且有效
+- 团队开发时所有成员需遵循此结构
+
 ## 已解决的问题
 
 ### 1. CMake 配置与平台检测
@@ -17,6 +120,7 @@
 - 子项目依赖关系在 iOS 平台上需要重新配置
 - 可执行文件的构建规则在 iOS 上需要特殊处理
 - 某些库和功能（如 GLFW）在 iOS 上不可用，需要条件编译
+- 头文件包含路径需要统一管理，避免繁琐的逐个修改
 
 #### 解决方案
 
@@ -33,6 +137,45 @@ else()
 endif() 
 ```
 
+- 实现集中管理的包含路径解决方案，通过符号链接和平台特定配置
+
+```cmake
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(IOS_PLATFORM TRUE)
+    message(STATUS "Building for iOS platform")
+    
+    # iOS平台特定的包含路径设置
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/ios_includes
+    )
+    
+    # 设置Xcode特定属性
+    set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
+else()
+    set(IOS_PLATFORM FALSE)
+    message(STATUS "Building for non-iOS platform")
+    
+    # 非iOS平台的包含路径保持不变
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/src/lib
+        ${libcimbar_SOURCE_DIR}/src/third_party_lib
+    )
+endif()
+
+# 对所有子项目使用相同的包含路径
+include_directories(
+    ${GLOBAL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+)
+```
+
+- 定义项目根目录宏，用于测试代码和资源定位
+
+```cmake
+# 定义项目根目录宏，用于测试代码和样本文件定位
+add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
+```
+
 - 使用条件编译排除不兼容的功能模块
 
 ```cmake
@@ -41,19 +184,17 @@ if(NOT IOS_PLATFORM)
     # 只在非iOS平台上添加这些模块
     set(PROJECTS
         ${PROJECTS}
-        src/exe/cimbar_send
-        src/exe/cimbar_scan
+        src/lib/cimbar_js
+        src/lib/gui
     )
 endif()
 ```
 
-- 对于子项目，为项目特定的 CMakeLists.txt 添加额外的 include_directories 指令，以确保 iOS 平台的头文件路径可用
+- 在子项目中使用target_include_directories替代全局include_directories
 
 ```cmake
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party_lib
-)
+# 使用target_include_directories而非全局include_directories
+target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
 ```
 
 - 在主 CMakeLists.txt 中调整链接选项和编译标志，使其与iOS兼容
@@ -62,18 +203,6 @@ include_directories(
 if(IOS_PLATFORM)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fembed-bitcode")
-endif()
-```
-
-- 对于可执行文件，为 iOS 平台提供特定的构建和安装规则
-
-```cmake
-if(NOT IOS_PLATFORM)
-    # 仅在非 iOS 平台上执行这些安装命令
-    install(
-        TARGETS my_executable
-        DESTINATION bin
-    )
 endif()
 ```
 
@@ -140,6 +269,7 @@ link_directories(
 
 #### 问题
 
+- 原始代码使用相对路径引用头文件，在iOS平台上导致编译错误
 - 多个文件报告找不到头文件，包括:
   - include/wirehair/wirehair.h
   - correct.h
@@ -147,55 +277,78 @@ link_directories(
   - zstd/zstd.h
   - cimbar_js/cimbar_js.h
   - cimb_translator/Config.h
+- 每个文件使用不同的相对路径，导致需要逐个手动修改每个文件
+- 在多层嵌套目录结构中，相对路径非常繁琐且容易出错
 
 #### 解决方案
 
-- 修改包含语句，从尖括号改为引号，以确保编译器能找到所需文件。
+为了解决头文件包含路径问题，我们实现了一个集中管理的包含路径方案：
 
-- 对于wirehair/wirehair.h，修改了包含方式:
+1. 创建集中的包含目录结构
 
-```cpp
-// 修改前
-#include <wirehair/wirehair.h>
-// 修改后
-#include "include/wirehair/wirehair.h"
+```bash
+mkdir -p ios_includes
+cd ios_includes
+ln -s ../src/lib lib
+ln -s ../src/third_party_lib third_party_lib
 ```
 
-- 对于fec_shim.h，修改了包含方式:
+2. 使用标准化的包含语法，以模块路径而非相对路径
 
 ```cpp
-// 修改前
-#include <correct.h>
-// 修改后
-#include "correct.h"
-```
-
-- 对于zstd_dstream.h，使用相对路径:
-
-```cpp
-// 修改前
-#include "zstd/zstd.h"
-// 修改后
+// 原始方式 - 相对路径
 #include "../../third_party_lib/zstd/zstd.h"
+
+// 新的方式 - 模块路径
+#include "zstd/zstd.h"
 ```
 
-- 对于send.cpp，同样使用相对路径:
-
-```cpp
-// 修改前
-#include "cimbar_js/cimbar_js.h"
-// 修改后
-#include "../../lib/cimbar_js/cimbar_js.h"
-```
-
-- 在cimbar_send的CMakeLists.txt中添加额外的包含路径:
+3. 修改CMake配置，使用平台特定的包含路径设置
 
 ```cmake
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # iOS平台特定的包含路径设置
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/ios_includes
+    )
+    
+    # 设置Xcode特定属性
+    set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
+else()
+    # 非iOS平台的包含路径保持不变
+    set(GLOBAL_INCLUDE_DIRS
+        ${libcimbar_SOURCE_DIR}/src/lib
+        ${libcimbar_SOURCE_DIR}/src/third_party_lib
+    )
+endif()
+
+# 全局包含路径设置
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party_lib
+    ${GLOBAL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
 )
 ```
+
+4. 在子项目中使用target_include_directories替代全局include_directories
+
+```cmake
+# 使用target_include_directories而非全局include_directories
+target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
+```
+
+5. 定义项目根目录宏，解决测试代码中LIBCIMBAR_PROJECT_ROOT未定义问题
+
+```cmake
+# 定义项目根目录宏，用于测试代码和样本文件定位
+add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
+```
+
+这种方法实现了以下目标：
+
+- 避免了逐个手动修改相对路径的繁琐工作
+- 统一了头文件包含语法，提高了代码可读性
+- 使用了符号链接自动管理依赖关系，提高了维护性
+- 最小化了对源代码的修改，主要在构建系统级别解决问题
 
 ### 4. 平台特定实现替换
 
@@ -240,15 +393,25 @@ include_directories(
   - 使用 Metal 或 OpenGL ES 替代 GLFW 功能
   - 创建 Objective-C++ 桥接层连接 C++ 代码和 Swift/Objective-C 代码
 
-2. 解决剩余的头文件路径问题
+2. 实现包含路径管理方案
+
+- 状态: 已完成 ✓
+- 实现内容:
+  - 创建集中的包含目录结构（ios_includes）
+  - 通过符号链接统一管理头文件路径
+  - 修改CMake配置，使用平台特定的包含路径设置
+  - 将相对路径方式改为模块路径方式（module/header.h）
+  - 定义项目根目录宏解决测试代码资源定位问题
+
+3. 解决平台特定库依赖问题
 
 - 状态: 进行中
 - 计划:
-  - 确定是继续使用相对路径方法还是优化为绝对路径
-  - CMake 配置
-  - 测试现有修改在 iOS 平台的兼容性
+  - 使用条件编译为fec.h等缺失依赖提供替代实现
+  - 确保所有第三方库在iOS平台上正确编译
+  - 解决libcorrect等依赖库的特定问题
 
-3. 测试核心功能
+4. 测试核心功能
 
 - 状态: 未开始
 - 计划:
