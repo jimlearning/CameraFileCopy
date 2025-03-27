@@ -1,4 +1,10 @@
+#ifndef CORRECT_CONVOLUTIONAL_SSE_LOOKUP
+#define CORRECT_CONVOLUTIONAL_SSE_LOOKUP
+
 #include "correct/convolutional/lookup.h"
+
+// 判断iOS平台
+#if defined(CIMBAR_IOS_PLATFORM) || defined(IOS_PLATFORM)
 
 // iOS平台特有实现 - 移除对x86intrin.h的依赖
 // 定义必要的类型和结构以保持API兼容性
@@ -18,9 +24,13 @@ typedef struct {
 
 #endif // __ARM_IOS_PLATFORM_TYPES__
 
+// iOS平台上的类型定义 - 保持API兼容性
 typedef unsigned int distance_quad_key_t;
 typedef unsigned int output_quad_t;
 typedef uint64_t distance_quad_t;
+typedef uint16_t distance_oct_key_t;
+typedef uint64_t output_oct_t;
+typedef uint64_t distance_oct_t;
 
 typedef struct {
     distance_quad_key_t *keys;

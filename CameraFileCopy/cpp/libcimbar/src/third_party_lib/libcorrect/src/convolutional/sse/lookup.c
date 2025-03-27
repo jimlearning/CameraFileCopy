@@ -1,3 +1,6 @@
+// 为iOS平台完全禁用此文件
+#if !defined(CIMBAR_IOS_PLATFORM) && !defined(IOS_PLATFORM)
+
 #include "correct/convolutional/sse/lookup.h"
 
 quad_lookup_t quad_lookup_create(unsigned int rate,
@@ -181,3 +184,5 @@ void oct_lookup_fill_distance_sse(oct_lookup_t octs, distance_t *distances) {
     }
 }
 */
+
+#endif // !defined(CIMBAR_IOS_PLATFORM) && !defined(IOS_PLATFORM)

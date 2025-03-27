@@ -16,24 +16,38 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     
     # 添加iOS平台兼容性目录到包含路径
     message(STATUS "Adding iOS-specific compatibility include directory")
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ios_includes)
+    include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes)
     
     # 添加iOS平台兼容性源文件
     message(STATUS "Adding iOS platform compatibility implementation files")
     set(IOS_COMPAT_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/fec.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ios_includes/sse_lookup.c
     )
 
     # 创建兼容性静态库
     add_library(ios_compat STATIC ${IOS_COMPAT_SRC})
     
+    # 确保其他模块会链接到我们的兼容性库
+    link_libraries(ios_compat)
+    
+    # 确保禁用所有SSE相关功能
+    message(STATUS "Disabling SSE functionality on iOS platform")
+    add_definitions(-DHAVE_SSE=0 -DCIMBAR_IOS_PLATFORM)
+    
+    # 设置全局编译器标志，显式指示不使用SSE指令集
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCIMBAR_IOS_PLATFORM -DHAVE_SSE=0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCIMBAR_IOS_PLATFORM -DHAVE_SSE=0")
+    
     # 创建特定平台的源文件排除列表，避免编译 libcorrect 工具目录下的文件
-    message(STATUS "Excluding libcorrect tools source files from compilation on iOS platform")
+    message(STATUS "Excluding libcorrect tools and SSE source files from compilation on iOS platform")
+    file(GLOB SSE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/src/convolutional/sse/*.c")
     set_source_files_properties(
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_libfec_poly.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_conv_optim_poly_annealing.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/third_party_lib/libcorrect/tools/find_rs_primitive_poly.c
+        ${SSE_SOURCE_FILES}
         PROPERTIES HEADER_FILE_ONLY TRUE
     )
     
