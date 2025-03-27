@@ -1,9 +1,23 @@
 /* This code is subject to the terms of the Mozilla Public License, v.2.0. http://mozilla.org/MPL/2.0/. */
 #pragma once
 
+// iOS平台使用不同的OpenGL ES头文件路径
+#if defined(__APPLE__)
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+#else
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
+#endif
+
 #include <iostream>
+
+// 定义CIMBAR_IOS_PLATFORM确保所有iOS兼容代码生效
+#if defined(__APPLE__)
+#ifndef CIMBAR_IOS_PLATFORM
+#define CIMBAR_IOS_PLATFORM
+#endif
+#endif
 
 namespace cimbar {
 
@@ -20,40 +34,63 @@ public:
 		return _s;
 	}
 
-	bool good() const
+	~gl_shader()
 	{
-		return _s != 0;
+		if (_s)
+			glDeleteShader(_s);
+		_s = 0;
 	}
 
-public:
-	static GLuint compile(GLenum type, const char* source)
+	bool check_compile_error(const std::string& context="compile_shader")
 	{
-		GLuint shader = glCreateShader(type);
-		if (shader == 0)
+		GLint compiled = GL_FALSE;
+		glGetShaderiv(_s, GL_COMPILE_STATUS, &compiled);
+		if (compiled != GL_TRUE)
 		{
-			 std::cerr << "Failed to create shader";
-			return 0;
+			GLint logLength = 0;
+			glGetShaderiv(_s, GL_INFO_LOG_LENGTH, &logLength);
+			if (logLength)
+			{
+				char* logBuffer = new char[logLength];
+				glGetShaderInfoLog(_s, logLength, NULL, logBuffer);
+				std::cerr << context << " error: " << logBuffer << std::endl;
+				delete[] logBuffer;
+			}
+			return false;
 		}
-
-		glShaderSource(shader, 1, &source, NULL);
-		glCompileShader(shader);
-
-		GLint res;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &res);
-		if (!res)
-		{
-			 std::cerr << "Error compiling shader" << std::endl;
-			GLchar info[1000];
-			glGetShaderInfoLog(shader, 1000, NULL, info);
-			 std::cerr << info << std::endl;
-			glDeleteShader(shader);
-			return 0;
-		}
-
-		return shader;
+		return true;
 	}
 
 protected:
+	GLuint compile(GLenum type, const char* source)
+	{
+		if (!source)
+			return 0;
+
+		GLuint shader = glCreateShader(type);
+		glShaderSource(shader, 1, &source, nullptr);
+		glCompileShader(shader);
+
+		GLint compileStatus = GL_FALSE;
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
+		if (compileStatus != GL_TRUE)
+		{
+			GLint logLength = 0;
+			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+			if (logLength)
+			{
+				char* logBuffer = new char[logLength];
+				glGetShaderInfoLog(shader, logLength, NULL, logBuffer);
+				std::cerr << "Error compiling shader: " << logBuffer << std::endl;
+				delete[] logBuffer;
+			}
+			glDeleteShader(shader);
+			return 0;
+		}
+		return shader;
+	}
+
+private:
 	GLuint _s;
 };
 

@@ -4,134 +4,135 @@
 #include "gl_2d_display.h"
 #include "mat_to_gl.h"
 
+// iOS平台特有的头文件
+#if defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+// 这里应该根据实际需要引入UIKit或其他iOS图形框架
+// #include <UIKit/UIKit.h>
+#else
 #include <GLFW/glfw3.h>
+#endif
+
 #include <chrono>
 #include <string>
 #include <thread>
+#include <memory>
+
+// 定义CIMBAR_IOS_PLATFORM确保所有iOS兼容代码生效
+#if defined(__APPLE__)
+#ifndef CIMBAR_IOS_PLATFORM
+#define CIMBAR_IOS_PLATFORM
+#endif
+#endif
 
 namespace cimbar {
 
 class window_glfw
 {
 public:
-	window_glfw(unsigned width, unsigned height, std::string title)
-	    : _width(width)
-	{
-		if (!glfwInit())
-		{
-			_good = false;
-			return;
-		}
+    window_glfw(unsigned width, unsigned height, std::string title)
+        : _width(width), _height(height), _title(title), _good(true)
+    {
+#if defined(CIMBAR_IOS_PLATFORM)
+        // iOS平台不使用GLFW，而是依赖UIKit/Metal/OpenGL ES
+        // 在实际的iOS实现中，这部分会由iOS应用层负责处理
+        _display = std::make_shared<cimbar::gl_2d_display>();
+        glGenTextures(1, &_texid);
+        init_opengl(width, height);
+#else
+        if (!glfwInit())
+        {
+            _good = false;
+            return;
+        }
 
-		_w = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
-		if (!_w)
-		{
-			_good = false;
-			return;
-		}
-		glfwMakeContextCurrent(_w);
-		glfwSwapInterval(1);
+        _w = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
+        if (!_w)
+        {
+            _good = false;
+            return;
+        }
+        glfwMakeContextCurrent(_w);
+        glfwSwapInterval(1);
 
-		_display = std::make_shared<cimbar::gl_2d_display>(width, height);
-		glGenTextures(1, &_texid);
-		init_opengl(width, height);
-	}
+        _display = std::make_shared<cimbar::gl_2d_display>();
+        glGenTextures(1, &_texid);
+        init_opengl(width, height);
+#endif
+    }
 
-	~window_glfw()
-	{
-		if (_w)
-			glfwDestroyWindow(_w);
-		if (_texid)
-			glDeleteTextures(1, &_texid);
-		glfwTerminate();
-	}
+    ~window_glfw()
+    {
+#if !defined(CIMBAR_IOS_PLATFORM)
+        if (_w)
+            glfwDestroyWindow(_w);
+        glfwTerminate();
+#endif
 
-	bool is_good() const
-	{
-		return _good;
-	}
+        if (_texid)
+            glDeleteTextures(1, &_texid);
+    }
 
-	bool should_close() const
-	{
-		return glfwWindowShouldClose(_w);
-	}
+    bool is_good() const
+    {
+        return _good;
+    }
 
-	void auto_scale_to_window()
-	{
-		if (!is_good())
-			return;
-		auto fun = [](GLFWwindow*, int w, int h){ glViewport(0, 0, w, h); };
-		glfwSetWindowSizeCallback(_w, fun);
-	}
+    bool should_close() const
+    {
+#if defined(CIMBAR_IOS_PLATFORM)
+        // iOS应用由系统控制生命周期，不需要此检查
+        return false;
+#else
+        return glfwWindowShouldClose(_w);
+#endif
+    }
 
-	void rotate(unsigned i=1)
-	{
-		if (_display)
-			_display->rotate(i);
-	}
+    void show(const cv::Mat& img)
+    {
+        if (!is_good())
+            return;
 
-	void shake(unsigned i=1)
-	{
-		if (_display)
-			_display->shake(i);
-	}
+        // 这部分OpenGL代码在iOS和其他平台上是兼容的
+        cimbar::mat_to_gl::load_gl_texture(_texid, img);
+        if (_display)
+            _display->draw();
 
-	void clear()
-	{
-		if (_display)
-		{
-			_display->clear();
-			swap();
-		}
-	}
+#if !defined(CIMBAR_IOS_PLATFORM)
+        glfwSwapBuffers(_w);
+        glfwPollEvents();
+#endif
+    }
 
-	void show(const cv::Mat& img, unsigned delay)
-	{
-		std::chrono::time_point start = std::chrono::high_resolution_clock::now();
+    unsigned width() const
+    {
+        return _width;
+    }
 
-		if (_display)
-		{
-			cimbar::mat_to_gl::load_gl_texture(_texid, img);
-			_display->draw(_texid);
-
-			swap();
-			poll();
-		}
-
-		unsigned millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
-		if (delay > millis)
-			std::this_thread::sleep_for(std::chrono::milliseconds(delay-millis));
-	}
-
-	unsigned width() const
-	{
-		return _width;
-	}
+    unsigned height() const
+    {
+        return _height;
+    }
 
 protected:
-	void init_opengl(int width, int height)
-	{
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glViewport(0, 0, width, height);
-	}
-
-	void swap()
-	{
-		// show next frame
-		glfwSwapBuffers(_w);
-	}
-
-	void poll()
-	{
-		glfwPollEvents();
-	}
+    void init_opengl(unsigned width, unsigned height)
+    {
+        glEnable(GL_TEXTURE_2D);
+        glViewport(0, 0, width, height);
+    }
 
 protected:
-	GLFWwindow* _w;
-	GLuint _texid;
-	std::shared_ptr<cimbar::gl_2d_display> _display;
-	unsigned _width;
-	bool _good = true;
+    unsigned _width;
+    unsigned _height;
+    std::string _title;
+    bool _good;
+
+#if !defined(CIMBAR_IOS_PLATFORM)
+    GLFWwindow* _w;
+#endif
+
+    std::shared_ptr<cimbar::gl_2d_display> _display;
+    GLuint _texid;
 };
 
 }

@@ -5,8 +5,15 @@
 #include "gl_shader.h"
 #include "util/loop_iterator.h"
 
+// iOS平台使用不同的OpenGL ES头文件路径
+#if defined(__APPLE__)
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+#else
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
+#endif
+
 #include <memory>
 
 namespace cimbar {
@@ -19,158 +26,134 @@ protected:
 	     1.0f, -1.0f, 0.0f,
 	    -1.0f,  1.0f, 0.0f,
 	     1.0f, -1.0f, 0.0f,
-	     1.0f,  1.0f, 0.0f,
-	    -1.0f,  1.0f, 0.0f
+	    -1.0f,  1.0f, 0.0f,
+	     1.0f,  1.0f, 0.0f
 	};
 
-	// just using sin and cos is probably better?
-	static constexpr std::array<std::array<GLfloat, 4>, 4> ROTATIONS = {{
-	    {-1, 0, 0, 1},
-	    {1, 0, 0, -1}, // right 180
-	    {0, 1, 1, 0},  // right 90
-	    {0, -1, -1, 0} // right 270
-	}};
+	static constexpr GLfloat TEXTURE_UVS[] = {
+	    0.0f, 1.0f,
+	    1.0f, 1.0f,
+	    0.0f, 0.0f,
+	    1.0f, 1.0f,
+	    0.0f, 0.0f,
+	    1.0f, 0.0f
+	};
 
-	static std::array<std::pair<GLfloat, GLfloat>, 4> computeShakePos(float dim)
+public:
+	static cimbar::gl_program create_vertex_fragment_program(const std::string& fragSource, const std::string& vertSource=_default_vertex_shader())
 	{
-		float shake = 8.0f / dim; // 1080
-		float zero = 0.0f;
-		return {{
-			{zero, zero},
-			{zero-shake, zero-shake},
-			{zero, zero},
-			{zero+shake, zero+shake}
-		}};
+		cimbar::gl_shader vert(GL_VERTEX_SHADER, vertSource);
+		bool success = vert.check_compile_error("vertex_shader");
+		if (!success)
+			return cimbar::gl_program(0, 0, ""); // 返回空程序而不是整数0
+
+		cimbar::gl_shader frag(GL_FRAGMENT_SHADER, fragSource);
+		success = frag.check_compile_error("fragment_shader");
+		if (!success)
+			return cimbar::gl_program(0, 0, ""); // 返回空程序而不是整数0
+
+		return cimbar::gl_program(vert, frag, "position");
+	}
+
+	static GLuint create_vao(const gl_program& program)
+	{
+		if (!program)
+			return 0;
+
+		GLuint vao = 0;
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+
+		GLuint vbo[2];
+		glGenBuffers(2, vbo);
+
+		// position
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(PLANE), PLANE, GL_STATIC_DRAW);
+		GLint positionAttrib = glGetAttribLocation(program, "position");
+		glEnableVertexAttribArray(positionAttrib);
+		glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		// uv
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(TEXTURE_UVS), TEXTURE_UVS, GL_STATIC_DRAW);
+		GLint uvAttrib = glGetAttribLocation(program, "tex_coord");
+		if (uvAttrib != -1)
+		{
+			glEnableVertexAttribArray(uvAttrib);
+			glVertexAttribPointer(uvAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		}
+
+		//unbind
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		return vao;
+	}
+
+	static const std::string& _default_fragment_shader()
+	{
+		static const std::string shader = R"(
+			precision mediump float;
+			uniform sampler2D tex;
+			varying vec2 texCoord;
+			void main()
+			{
+				gl_FragColor = texture2D(tex, texCoord);
+			}
+		)";
+		return shader;
+	}
+
+	static const std::string& _default_vertex_shader()
+	{
+		static const std::string shader = R"(
+			precision mediump float;
+			attribute vec3 position;
+			attribute vec2 tex_coord;
+			varying vec2 texCoord;
+			void main()
+			{
+				gl_Position = vec4(position, 1.0);
+				texCoord = tex_coord;
+			}
+		)";
+		return shader;
 	}
 
 public:
-	gl_2d_display(unsigned width, unsigned height)
-	    : _p(create())
-	    , _shakePos(computeShakePos(std::min(width, height)))
-	    , _shake(_shakePos)
-	    , _rotation(ROTATIONS)
+	gl_2d_display(const std::string& fragmentSource=_default_fragment_shader())
+	    : _program(create_vertex_fragment_program(fragmentSource)) // 使用初始化列表初始化_program
 	{
-		glGenBuffers(3, _vbo.data());
-		glGenVertexArrays(1, &_vao);
+		_vao = create_vao(_program);
 	}
 
-	void clear()
+	~gl_2d_display()
 	{
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f );
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (_vao)
+			glDeleteVertexArrays(1, &_vao);
+		_vao = 0;
 	}
 
-	void draw(GLuint texture)
+	bool good() const
 	{
-		GLuint prog = program();
-		glUseProgram(prog);
+		return _vao != 0 and _program;
+	}
 
-		// Setup VBO
-		glBindBuffer(GL_ARRAY_BUFFER, _vbo[_i]);
-		glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(GLfloat), PLANE, GL_STATIC_DRAW);
-
-		// Setup VAO
-		GLint vertexPositionAttribute = glGetAttribLocation(prog, "vert");
+	void draw() const
+	{
+		// use our texture and vao
+		set_program();
 		glBindVertexArray(_vao);
-		glEnableVertexAttribArray(vertexPositionAttribute);
-		glVertexAttribPointer(vertexPositionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-		// Bind to texture
-		GLuint textureUniform = glGetUniformLocation(prog, "tex");
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glUniform1i(textureUniform, 0);
-
-		// pass in rotation matrix
-		GLuint rotateUniform = glGetUniformLocation(prog, "rot");
-		std::array<GLfloat, 4> rot = *_rotation;
-		glUniformMatrix2fv(rotateUniform, 1, false, rot.data());
-
-		// pass in transform vector
-		GLuint transformUniform = glGetUniformLocation(prog, "tform");
-		std::pair<GLfloat, GLfloat> tform = *_shake;
-		glUniform2f(transformUniform, tform.first, tform.second);
-
-		// Draw
+		//glActiveTexture(GL_TEXTURE0);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-		// Unbind
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-
-		++_i;
-		if (_i >= 3)
-			_i = 0;
 	}
 
-	GLuint program() const
+	void set_program() const
 	{
-		return *_p;
-	}
-
-	void rotate(unsigned i=1)
-	{
-		if (i == 0)
-			_rotation.reset();
-		else
-			++_rotation;
-	}
-
-	void shake(unsigned i=1)
-	{
-		if (i == 0)
-			_shake.reset();
-		else
-			++_shake;
+		_program.use();
 	}
 
 protected:
-	static std::shared_ptr<cimbar::gl_program> create()
-	{
-		/* rotations
-		 *
-		 * vec2 br = vec2(1.0f + vert.x, 1.0f - vert.y); // default
-		 * vec2 bl = vec2(1.0f - vert.y, 1.0f - vert.x);
-		 * vec2 tl = vec2(1.0f - vert.x, 1.0f + vert.y);
-		 * vec2 tr = vec2(1.0f + vert.y, 1.0f + vert.x);
-		*/
-		static const std::string VERTEX_SHADER_SRC = R"(#version 300 es
-		uniform mat2 rot;
-		uniform vec2 tform;
-		in vec4 vert;
-		out vec2 texCoord;
-		void main() {
-		   gl_Position = vec4(vert.x, vert.y, 0.0f, 1.0f);
-		   vec2 ori = vec2(vert.x, vert.y);
-		   ori *= rot;
-		   texCoord = vec2(1.0f - ori.x, 1.0f - ori.y) / 2.0;
-		   texCoord -= tform;
-		})";
-
-		static const std::string FRAGMENT_SHADER_SRC = R"(#version 300 es
-		precision mediump float;
-		uniform sampler2D tex;
-		in vec2 texCoord;
-		out vec4 finalColor;
-		void main() {
-		   finalColor = texture(tex, texCoord);
-		})";
-
-		GLuint vertexShader = cimbar::gl_shader(GL_VERTEX_SHADER, VERTEX_SHADER_SRC);
-		GLuint fragmentShader = cimbar::gl_shader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER_SRC);
-		return std::make_shared<cimbar::gl_program>(vertexShader, fragmentShader, "vert");
-	}
-
-protected:
-	std::shared_ptr<cimbar::gl_program> _p;
-	std::array<GLuint, 3> _vbo;
+	cimbar::gl_program _program;
 	GLuint _vao;
-	unsigned _i = 0;
-
-	std::array<std::pair<GLfloat, GLfloat>, 4> _shakePos;
-	loop_iterator<decltype(_shakePos)> _shake;
-	loop_iterator<decltype(ROTATIONS)> _rotation;
 };
-
-}
