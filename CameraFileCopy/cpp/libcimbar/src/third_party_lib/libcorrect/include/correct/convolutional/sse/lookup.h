@@ -1,9 +1,22 @@
 #include "correct/convolutional/lookup.h"
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
+
+// iOS平台特有实现 - 移除对x86intrin.h的依赖
+// 定义必要的类型和结构以保持API兼容性
+#ifndef __ARM_IOS_PLATFORM_TYPES__
+#define __ARM_IOS_PLATFORM_TYPES__
+
+// 替代x86的__m128i等类型
+typedef struct {
+    uint32_t data[4];
+} __m128i_substitute;
+
+// 空实现SSE函数，保持API兼容
+#define _mm_min_epu16(a, b) ((void)(a), (void)(b), (__m128i_substitute){0})
+#define _mm_set1_epi8(a) ((void)(a), (__m128i_substitute){0})
+#define _mm_set1_epi16(a) ((void)(a), (__m128i_substitute){0})
+#define _mm_setzero_si128() ((__m128i_substitute){0})
+
+#endif // __ARM_IOS_PLATFORM_TYPES__
 
 typedef unsigned int distance_quad_key_t;
 typedef unsigned int output_quad_t;

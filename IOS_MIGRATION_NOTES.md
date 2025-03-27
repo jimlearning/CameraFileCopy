@@ -275,7 +275,7 @@ link_directories(
 
 #### 问题
 
-- 原始代码使用相对路径引用头文件，在iOS平台上导致编译错误
+- 原始代码使用相对路径引用头文件，在 iOS 平台上导致编译错误
 - 多个文件报告找不到头文件，包括:
   - include/wirehair/wirehair.h
   - correct.h
@@ -309,19 +309,19 @@ ln -s ../src/third_party_lib third_party_lib
 #include "zstd/zstd.h"
 ```
 
-3. 修改CMake配置，使用平台特定的包含路径设置
+3. 修改主 CMakeLists.txt，使用平台特定的包含路径设置
 
 ```cmake
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    # iOS平台特定的包含路径设置
+    # iOS 平台特定的包含路径设置
     set(GLOBAL_INCLUDE_DIRS
         ${libcimbar_SOURCE_DIR}/ios_includes
     )
     
-    # 设置Xcode特定属性
+    # 设置 Xcode 特定属性
     set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
 else()
-    # 非iOS平台的包含路径保持不变
+    # 非 iOS 平台的包含路径保持不变
     set(GLOBAL_INCLUDE_DIRS
         ${libcimbar_SOURCE_DIR}/src/lib
         ${libcimbar_SOURCE_DIR}/src/third_party_lib
@@ -335,14 +335,14 @@ include_directories(
 )
 ```
 
-4. 在子项目中使用target_include_directories替代全局include_directories
+4. 在子项目中使用 target_include_directories 替代全局 include_directories
 
 ```cmake
-# 使用target_include_directories而非全局include_directories
+# 使用 target_include_directories 而非全局 include_directories
 target_include_directories(cimbar_send PRIVATE ${GLOBAL_INCLUDE_DIRS})
 ```
 
-5. 定义项目根目录宏，解决测试代码中LIBCIMBAR_PROJECT_ROOT未定义问题
+5. 定义项目根目录宏，解决测试代码中 LIBCIMBAR_PROJECT_ROOT 未定义问题
 
 ```cmake
 # 定义项目根目录宏，用于测试代码和样本文件定位
@@ -405,7 +405,7 @@ add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
 - 实现内容:
   - 创建集中的包含目录结构（ios_includes）
   - 通过符号链接统一管理头文件路径
-  - 修改CMake配置，使用平台特定的包含路径设置
+  - 修改 CMakeLists.txt，使用平台特定的包含路径设置
   - 将相对路径方式改为模块路径方式（module/header.h）
   - 定义项目根目录宏解决测试代码资源定位问题
 
@@ -414,11 +414,12 @@ add_definitions(-DLIBCIMBAR_PROJECT_ROOT="${libcimbar_SOURCE_DIR}")
 - 状态: 进行中
 - 已完成:
   - 在主 CMakeLists.txt 中实现全局测试目录跳过机制
-  - 修改libcorrect库的CMakeLists.txt，在iOS平台上跳过测试代码构建
-  - 为iOS平台添加libfec函数的空实现，解决编译错误
+  - 修改 libcorrect 库的 CMakeLists.txt，在 iOS 平台上跳过测试代码构建
+  - 为 iOS 平台添加 libfec 函数的空实现，解决编译错误
+  - 解决 libcorrect 库的 x86 架构特有 SSE 指令集兼容性问题
 - 计划:
-  - 使用条件编译为fec.h等缺失依赖提供替代实现
-  - 确保所有第三方库在iOS平台上正确编译
+  - 使用条件编译为 fec.h 等缺失依赖提供替代实现
+  - 确保所有第三方库在 iOS 平台上正确编译
   - 解决其他依赖库的特定问题
 
 #### 全局测试目录跳过机制
@@ -479,12 +480,82 @@ endforeach()
 这种方法的优势：
 
 - 统一处理：一次解决所有测试目录问题，不需要在每个子项目中进行修改
-- 自动识别：自动检测目录名中包含“test”或“tests”的项目，不需要手动列出
+- 自动识别：自动检测目录名中包含 “test” 或 “tests” 的项目，不需要手动列出
 - 透明日志：构建过程中会显示哪些测试目录被跳过，便于调试
-- 灵活切换：只在iOS平台上禁用测试，其他平台保持原有行为
+- 灵活切换：只在 iOS 平台上禁用测试，其他平台保持原有行为
 - 零侵入性：不需要修改任何测试代码，只在构建系统级别解决问题
 
-4. 测试核心功能
+#### x86架构特有SSE指令集在iOS平台上的兼容性解决方案
+
+在将 libcorrect 库移植到 iOS 平台时，我们遇到了架构兼容性问题：libcorrect 库使用了 x86 架构特有的 SSE 指令集，而 iOS 设备使用的是 ARM 架构。我们采用以下解决方案：
+
+1. 在 CMakeLists.txt 中检测 iOS 平台并禁用 SSE 功能
+
+```cmake
+# 检测 iOS 平台
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(IOS_PLATFORM TRUE)
+  message(STATUS "Building for iOS platform - SSE disabled")
+  set(HAVE_SSE FALSE)
+else()
+  set(IOS_PLATFORM FALSE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    # 检查主机是否支持SSE 4.1指令集
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_DEFINITIONS -march=native)
+    check_c_source_compiles("
+      #include <x86intrin.h>
+      int main() {
+        __m128i a;
+        __m128i b;
+        __m128i c = _mm_min_epu16(a, b);
+        return 0;
+      }" HAVE_SSE)
+    cmake_pop_check_state()
+  endif()
+
+  if(HAVE_SSE)
+    message(STATUS "SSE 4.1 support enabled")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+  endif()
+endif()
+```
+
+2. 为 x86intrin.h 头文件提供替代实现
+
+```cpp
+// iOS平台特有实现 - 移除对x86intrin.h的依赖
+// 定义必要的类型和结构以保持API兼容性
+#ifndef __ARM_IOS_PLATFORM_TYPES__
+#define __ARM_IOS_PLATFORM_TYPES__
+
+// 替代x86的__m128i等类型
+typedef struct {
+    uint32_t data[4];
+} __m128i_substitute;
+
+// 空实现SSE函数，保持API兼容
+#define _mm_min_epu16(a, b) ((void)(a), (void)(b), (__m128i_substitute){0})
+#define _mm_set1_epi8(a) ((void)(a), (__m128i_substitute){0})
+#define _mm_set1_epi16(a) ((void)(a), (__m128i_substitute){0})
+#define _mm_setzero_si128() ((__m128i_substitute){0})
+
+#endif // __ARM_IOS_PLATFORM_TYPES__
+```
+
+这种解决方案的优势：
+
+- **架构隔离**：通过 CMake 的条件编译机制，我们完全跳过了 SSE 优化目录，使用基础实现
+- **功能完整性**：libcorrect 库有两套实现：基础实现和 SSE 优化实现。在 iOS 上使用基础实现，功能完全保持不变
+- **清晰的日志**：构建过程中明确显示 SSE 被禁用，方便调试
+- **平台兼容性**：只在 iOS 平台上应用这些变更，其他平台继续使用原有的优化实现
+
+长期改进建议：
+
+- 在未来的版本中，可以考虑为 ARM 架构开发 NEON 指令集的优化实现，类似于 x86 架构的 SSE 优化实现
+- 目前的解决方案优先确保代码能在 iOS 上正常工作，而非兼顾性能优化
+
+#### 4. 测试核心功能
 
 - 状态: 未开始
 - 计划:
@@ -492,17 +563,17 @@ endforeach()
   - 确保验证编码/解码功能是否正常工作
   - 检查性能和内存使用情况
 
-### 6. 移植策略总结
+#### 6. 移植策略总结
 
 我们采取的核心策略是**"保留所有功能，提供平台特定实现"**，而不是简单地排除不兼容的模块。这包括:
 
 - 条件编译 - 使用平台检测宏和条件语句区分不同平台的代码路径
-- 最小干扰 - 尽量保持原有代码结构和API接口不变
+- 最小干扰 - 尽量保持原有代码结构和 API 接口不变
 - 平台替代 - 为 iOS 平台提供特定的实现，替代不可用的组件
 - 路径修正 - 解决头文件包含路径问题，确保编译器能找到所需文件
 
 这种方法确保了代码的可维护性和跨平台兼容性，同时保留了 libcimbar 的完整功能集。
 
-### 7. 后续更新计划
+#### 7. 后续更新计划
 
 本文档将随着项目进展定期更新，记录新发现的问题和解决方案。

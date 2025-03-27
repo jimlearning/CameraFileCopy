@@ -16,23 +16,32 @@ endif()
 find_library(FEC fec)
 CHECK_LIBRARY_EXISTS(FEC dotprod "" HAVE_LIBFEC)
 
-if(NOT CMAKE_CROSSCOMPILING)
-  # Check if host machine can compile with SSE 4.1 intrinsic
-  cmake_push_check_state(RESET)
-  set(CMAKE_REQUIRED_DEFINITIONS -march=native)
-  check_c_source_compiles("
-    #include <x86intrin.h>
-    int main() {
-      __m128i a;
-      __m128i b;
-      __m128i c = _mm_min_epu16(a, b);
-      return 0;
-    }" HAVE_SSE)
-  cmake_pop_check_state()
-endif()
+# 检测iOS平台
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(IOS_PLATFORM TRUE)
+  message(STATUS "Building for iOS platform - SSE disabled")
+  set(HAVE_SSE FALSE)
+else()
+  set(IOS_PLATFORM FALSE)
+  if(NOT CMAKE_CROSSCOMPILING)
+    # Check if host machine can compile with SSE 4.1 intrinsic
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_DEFINITIONS -march=native)
+    check_c_source_compiles("
+      #include <x86intrin.h>
+      int main() {
+        __m128i a;
+        __m128i b;
+        __m128i c = _mm_min_epu16(a, b);
+        return 0;
+      }" HAVE_SSE)
+    cmake_pop_check_state()
+  endif()
 
-if(HAVE_SSE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+  if(HAVE_SSE)
+    message(STATUS "SSE 4.1 support enabled")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+  endif()
 endif()
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
