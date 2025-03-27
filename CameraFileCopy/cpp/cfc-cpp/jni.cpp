@@ -5,8 +5,16 @@
 #include "extractor/Scanner.h"
 #include "serialize/format.h"
 
+// 条件包含平台特定头文件
+#if defined(__APPLE__)
+#ifndef CIMBAR_IOS_PLATFORM
+#define CIMBAR_IOS_PLATFORM
+#endif
+// iOS平台不需要JNI
+#else
 #include <jni.h>
 #include <android/log.h>
+#endif
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -152,6 +160,7 @@ namespace {
 		//*/
 	}
 
+#if !defined(CIMBAR_IOS_PLATFORM)
 	std::string jstring_to_cppstr(JNIEnv *env, const jstring& dataPathObj)
 	{
 		const char* temp = env->GetStringUTFChars(dataPathObj, NULL);
@@ -159,7 +168,83 @@ namespace {
 		env->ReleaseStringUTFChars(dataPathObj, temp);
 		return res;
 	}
+#endif
 }
+
+#if defined(CIMBAR_IOS_PLATFORM)
+// iOS特有的API函数
+
+// 处理图像，返回处理结果
+// 对应Android版本的Java_org_cimbar_camerafilecopy_MainActivity_processImageJNI
+extern "C" const char* processImageiOS(void* matPtr, const char* dataPath, int modeInt)
+{
+	++_calls;
+
+	// 获取参数
+	cv::Mat &mat = *(cv::Mat*) matPtr;
+	int modeVal = modeInt;
+
+	std::shared_ptr<MultiThreadedDecoder> proc;
+	{
+		std::lock_guard<std::mutex> lock(_mutex);
+		if (!_proc or !_proc->set_mode(modeVal))
+			_proc = std::make_shared<MultiThreadedDecoder>(dataPath, modeVal);
+		proc = _proc;
+	}
+
+	clock_t begin = clock();
+	cv::Mat img = mat.clone();
+	proc->add(img);
+
+	if (_calls & 32)
+	{
+		clock_t decodeSnapshot = proc->decoded;
+		clock_t perfectSnapshot = proc->perfect;
+		_transferStatus = perfectSnapshot > _frameSuccessSnapshot; // 1 == 部分解码
+		_transferStatus += (decodeSnapshot > _frameDecodeSnapshot); // 2 == 完全解码
+		_frameDecodeSnapshot = decodeSnapshot;
+		_frameSuccessSnapshot = perfectSnapshot;
+	}
+
+	drawProgress(mat, proc->get_progress());
+	drawGuidance(mat, _transferStatus);
+	//drawDebugInfo(mat, *proc);
+
+	// 计算处理时间
+	double totalTime = double(clock() - begin) / CLOCKS_PER_SEC;
+	// iOS没有Android日志，但我们保留计算逻辑
+
+	// 返回解码的文件名，提示用户保存
+	static std::string result;
+	result = "";
+	if (proc->detected_mode()) // 用于特殊信息传递
+		result = fmt::format("/{}", proc->detected_mode());
+
+	std::vector<std::string> all_decodes = proc->get_done();
+	for (std::string& s : all_decodes)
+		if (_completed.find(s) == _completed.end())
+		{
+			_completed.insert(s);
+			result = s;
+			break;
+		}
+	
+	return result.c_str();
+}
+
+// 停止处理
+// 对应Android版本的Java_org_cimbar_camerafilecopy_MainActivity_shutdownJNI
+extern "C" void shutdowniOS() {
+	// iOS没有Android日志，直接执行关闭操作
+
+	std::lock_guard<std::mutex> lock(_mutex);
+	if (_proc)
+		_proc->stop();
+	_proc = nullptr;
+}
+
+#else
+// Android特有的JNI API
 
 extern "C" {
 jstring JNICALL
@@ -201,7 +286,7 @@ Java_org_cimbar_camerafilecopy_MainActivity_processImageJNI(JNIEnv *env, jobject
 	// log computation time to Android Logcat
 	double totalTime = double(clock() - begin) / CLOCKS_PER_SEC;
 	__android_log_print(ANDROID_LOG_INFO, TAG, "processImage computation time = %f seconds\n",
-						totalTime);
+					totalTime);
 
 	// return a decoded file to prompt the user to save it, if there is a new one
 	string result;
@@ -229,3 +314,4 @@ Java_org_cimbar_camerafilecopy_MainActivity_shutdownJNI(JNIEnv *env, jobject ins
 }
 
 }
+#endif

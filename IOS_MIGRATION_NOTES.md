@@ -1055,3 +1055,160 @@ iOS和Android/Linux平台的OpenGL ES头文件路径存在差异，导致需要�
 1. **版本兼容性**：确保适配ES3.0或以上版本，因为一些较新的功能在ES2.0中可能不可用
 2. **扩展冲突**：某些平台特定扩展可能需要单独处理
 3. **GPU驱动兼容性**：在不同的iOS设备上测试，确保没有设备特定的兼容性问题
+
+## 窗口管理和GLFW库适配
+
+### 问题
+
+GLFW是一个跨平台的窗口管理和OpenGL上下文创建库，但它设计用于桌面平台（Windows、macOS、Linux），在iOS上完全不可用：
+
+```bash
+/Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/libcimbar/ios_includes/lib/gui/window_glfw.h:7:10: 'GLFW/glfw3.h' file not found
+```
+
+这个问题不同于简单的头文件路径问题，因为GLFW库本身在iOS上没有对应实现。
+
+### 解决方案
+
+为iOS平台创建了一个专用的`window_glfw.h`替代实现，使用条件编译来区分平台：
+
+1. **保持API兼容性**：
+   - 保留原始`window_glfw`类的所有公共方法和接口
+   - 确保函数签名与原始版本完全一致
+   - 这样依赖这个类的代码不需要修改
+
+2. **区分平台代码**：
+   ```cpp
+   #if defined(CIMBAR_IOS_PLATFORM)
+   // iOS平台特有代码
+   #else
+   // 原始GLFW代码
+   #endif
+   ```
+
+3. **提供功能等效实现**：
+   - 在iOS平台上跳过所有GLFW相关调用
+   - 保留核心OpenGL ES渲染功能
+   - 为iOS平台提供合理的默认返回值（例如，`should_close()`始终返回`false`）
+
+4. **平台特定成员变量**：
+   - 移除iOS平台不需要的GLFW特定成员（如`GLFWwindow* _w`）
+   - 保留共享的渲染相关成员（如`_display`和`_texid`）
+
+### 重要说明
+
+在实际iOS应用中，窗口管理和UI生命周期由iOS应用框架负责。这个实现只是一个兼容层，允许使用`window_glfw`类的代码在iOS平台上编译和运行，但真正的窗口创建和事件处理需要在iOS应用层实现。
+
+## 线程池和并发组件适配
+
+### 问题
+
+并发线程池组件的包含路径在iOS构建中找不到：
+
+```bash
+/Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/cfc-cpp/MultiThreadedDecoder.h:11:10: 'concurrent/thread_pool.h' file not found
+```
+
+### 解决方案
+
+将线程池相关文件添加到iOS包含路径中：
+
+1. 在iOS包含目录中创建相同的目录结构：
+
+   ```bash
+   mkdir -p /Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/libcimbar/ios_includes/concurrent
+   ```
+
+2. 将原始`thread_pool.h`文件复制到新路径：
+
+   ```bash
+   cp /Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/concurrent/thread_pool.h /Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/libcimbar/ios_includes/concurrent/
+   ```
+
+### 结果
+
+这种方法确保了`thread_pool.h`可以在iOS构建时被正确找到，而无需修改原始包含路径。值得注意的是，线程池实现本身是跨平台的，所以仅解决包含路径问题即可。
+
+## JNI (Java Native Interface) 适配
+
+### 问题
+
+项目中的JNI实现是Android平台特有的，在iOS中不可用：
+
+```bash
+/Users/jim/Projects/CameraFileCopy/CameraFileCopy/cpp/cfc-cpp/jni.cpp:8:10: fatal error: 'jni.h' file not found
+```
+
+JNI（Java Native Interface）是Java/Android平台特有的接口，用于Java和C++代码间的交互，在iOS平台上根本不存在。
+
+### 解决方案
+
+对`jni.cpp`文件进行了全面的平台适配：
+
+1. **条件包含头文件**：
+
+   ```cpp
+   #if defined(__APPLE__)
+   #ifndef CIMBAR_IOS_PLATFORM
+   #define CIMBAR_IOS_PLATFORM
+   #endif
+   // iOS平台不需要JNI
+   #else
+   #include <jni.h>
+   #include <android/log.h>
+   #endif
+   ```
+
+2. **为iOS平台创建专用API接口**：
+   - `processImageiOS` - 对应Android版本的`Java_org_cimbar_camerafilecopy_MainActivity_processImageJNI`
+   - `shutdowniOS` - 对应Android版本的`Java_org_cimbar_camerafilecopy_MainActivity_shutdownJNI`
+
+3. **保持核心处理逻辑一致**：
+   - 两个平台版本共享相同的图像处理和进度显示逻辑
+   - 主要差异只在接口层和平台特有功能上（如Android日志记录）
+
+4. **C语言接口替代JNI**：
+
+   ```cpp
+   // iOS版本的API接口
+   extern "C" const char* processImageiOS(void* matPtr, const char* dataPath, int modeInt);
+   extern "C" void shutdowniOS();
+   ```
+
+### 重要说明
+
+这种实现方法符合我们的“保留功能而不是排除模块”原则，确保了应用的核心图像处理和解码功能在iOS平台上可以正常工作。在实际iOS应用中，需要从 Swift/Objective-C代码调用这些C接口，而不是使用JNI。
+
+## 移植策略总结
+
+在将libcimbar库移植到iOS平台的过程中，我们采用了一套一致的策略，这些策略已被证明是有效的：
+
+### 核心原则
+
+1. **保留功能而非排除模块**：确保核心功能在iOS上可用，即使需要完全重写某些组件。
+
+2. **API兼容性优先**：为iOS平台提供的替代实现保持与原始API完全兼容，尽量不修改调用代码。
+
+3. **条件编译隔离平台差异**：使用预处理器宏和条件编译将平台特定代码分离，提高代码的可维护性。
+
+### 实施方法
+
+1. **识别平台差异**：准确识别iOS和其他平台之间的关键差异（如OpenGL ES头文件路径、缺失的GLFW库、JNI等）。
+
+2. **创建兼容层**：
+   - 为缺失的功能创建等效实现（如GLFW窗口管理）
+   - 为Android特有功能提供iOS替代（如JNI → C接口）
+   - 修复路径和包含问题（如thread_pool.h）
+
+3. **保持原始结构**：尽可能保持原始代码结构和命名约定，使代码库保持一致性和可读性。
+
+### 效果评估
+
+这种方法成功地解决了在iOS上构建libcimbar库时遇到的主要障碍，包括：
+
+- OpenGL ES路径和版本问题
+- GLFW窗口管理不兼容
+- 线程池组件包含路径
+- JNI依赖
+
+最终实现了库的跨平台兼容性，同时保持了核心功能，并最小化了维护多平台版本的复杂性。

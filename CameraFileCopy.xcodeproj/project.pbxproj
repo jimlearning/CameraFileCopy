@@ -146,6 +146,7 @@
 		384D8B892D94F6A7001600E7 /* history_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 384D8B872D94F6A7001600E7 /* history_buffer.c */; };
 		384D8B8B2D94F7AB001600E7 /* error_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 384D8B8A2D94F7AB001600E7 /* error_buffer.c */; };
 		384D8B8D2D94FA7E001600E7 /* lookup.c in Sources */ = {isa = PBXBuildFile; fileRef = 384D8B8C2D94FA7E001600E7 /* lookup.c */; };
+		384D8B922D95074B001600E7 /* jni.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 384D8B902D95074B001600E7 /* jni.cpp */; };
 		38C0AC6E2D941D6700425DA5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC6D2D941D6700425DA5 /* AppDelegate.m */; };
 		38C0AC712D941D6700425DA5 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC702D941D6700425DA5 /* SceneDelegate.m */; };
 		38C0AC742D941D6700425DA5 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 38C0AC732D941D6700425DA5 /* ViewController.mm */; };
@@ -644,6 +645,8 @@
 		384D8B882D94F6A7001600E7 /* error_buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = error_buffer.h; sourceTree = "<group>"; };
 		384D8B8A2D94F7AB001600E7 /* error_buffer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = error_buffer.c; sourceTree = "<group>"; };
 		384D8B8C2D94FA7E001600E7 /* lookup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lookup.c; sourceTree = "<group>"; };
+		384D8B8E2D95074B001600E7 /* thread_pool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = thread_pool.h; sourceTree = "<group>"; };
+		384D8B902D95074B001600E7 /* jni.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = jni.cpp; sourceTree = "<group>"; };
 		38C0AC692D941D6700425DA5 /* CameraFileCopy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CameraFileCopy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		38C0AC6C2D941D6700425DA5 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		38C0AC6D2D941D6700425DA5 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -1832,6 +1835,8 @@
 		384D8AC62D94F11B001600E7 /* ios_includes */ = {
 			isa = PBXGroup;
 			children = (
+				384D8B912D95074B001600E7 /* cfc-cpp */,
+				384D8B8F2D95074B001600E7 /* concurrent */,
 				384D89362D94F11B001600E7 /* correct */,
 				384D89E02D94F11B001600E7 /* lib */,
 				384D8AC12D94F11B001600E7 /* third_party_lib */,
@@ -1841,6 +1846,22 @@
 				384D8AC52D94F11B001600E7 /* sse_lookup.c */,
 			);
 			path = ios_includes;
+			sourceTree = "<group>";
+		};
+		384D8B8F2D95074B001600E7 /* concurrent */ = {
+			isa = PBXGroup;
+			children = (
+				384D8B8E2D95074B001600E7 /* thread_pool.h */,
+			);
+			path = concurrent;
+			sourceTree = "<group>";
+		};
+		384D8B912D95074B001600E7 /* cfc-cpp */ = {
+			isa = PBXGroup;
+			children = (
+				384D8B902D95074B001600E7 /* jni.cpp */,
+			);
+			path = "cfc-cpp";
 			sourceTree = "<group>";
 		};
 		38C0AC602D941D6700425DA5 = {
@@ -3303,6 +3324,7 @@
 				38C0AF042D9424C200425DA5 /* fec_shim.c in Sources */,
 				384D8B2F2D94F11C001600E7 /* reed-solomon.c in Sources */,
 				384D8B7D2D94F11C001600E7 /* huf_decompress.c in Sources */,
+				384D8B922D95074B001600E7 /* jni.cpp in Sources */,
 				384D8AE82D94F11B001600E7 /* cimbar_js.cpp in Sources */,
 				384D8B362D94F11C001600E7 /* convolutional.c in Sources */,
 				384D8AD02D94F11B001600E7 /* AdjacentCellFinderTest.cpp in Sources */,
