@@ -3,7 +3,7 @@
 
 #include "zstd_dstream.h"
 
-#include "../../third_party_lib/zstd/zstd.h"
+#include "zstd/zstd.h"
 #include <array>
 #include <iostream>
 #include <sstream>

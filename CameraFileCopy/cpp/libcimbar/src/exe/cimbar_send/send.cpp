@@ -1,11 +1,18 @@
 /* This code is subject to the terms of the Mozilla Public License, v.2.0. http://mozilla.org/MPL/2.0/. */
-#include "../../lib/cimbar_js/cimbar_js.h"
+// 首先包含iOS兼容性头文件，确保在标准库之前
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+// 使用绝对路径确保正确包含头文件
+#include "ios_includes/cxx_ios_compat.h"
+#include "ios_includes/__thread/this_thread.h"
+#endif
 
-#include "../../lib/cimb_translator/Config.h"
-#include "../../lib/serialize/str.h"
-#include "../../lib/util/File.h"
+#include "cimbar_js/cimbar_js.h"
 
-#include "../../third_party_lib/cxxopts/cxxopts.hpp"
+#include "cimb_translator/Config.h"
+#include "serialize/str.h"
+#include "util/File.h"
+
+#include "cxxopts/cxxopts.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -21,8 +28,16 @@ namespace {
 	TP wait_for_frame_time(unsigned delay, const TP& start)
 	{
 		unsigned millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
-		if (delay > millis)
+		if (delay > millis) {
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+			// 使用显式的命名空间限定，确保类型匹配
+				// 显式声明使用ios_compat命名空间的sleep_for函数
+			auto sleep_duration = ::std::chrono::milliseconds(delay-millis);
+			::ios_compat::this_thread::sleep_for(sleep_duration);
+#else
 			std::this_thread::sleep_for(std::chrono::milliseconds(delay-millis));
+#endif
+		}
 		return std::chrono::high_resolution_clock::now();
 	}
 
