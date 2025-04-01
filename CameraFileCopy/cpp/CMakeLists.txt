@@ -1,15 +1,38 @@
 cmake_minimum_required(VERSION 3.4.1)
 
+# 检查是否使用ios-cmake工具链
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+    message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+else()
+    message(STATUS "No toolchain file specified. Using default compiler.")
+endif()
+
+# 如果是iOS平台，设置相关变量
+if(IOS OR (CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    set(IOS_PLATFORM TRUE)
+    message(STATUS "Building for iOS platform with PLATFORM=${PLATFORM}")
+    add_definitions(-DCIMBAR_IOS_PLATFORM)
+    
+    # 设置iOS相关变量
+    if(NOT DEFINED DEPLOYMENT_TARGET)
+        set(DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum iOS deployment target" FORCE)
+    endif()
+    
+    if(NOT DEFINED PLATFORM)
+        set(PLATFORM "OS64" CACHE STRING "iOS platform target" FORCE)
+    endif()
+else()
+    set(IOS_PLATFORM FALSE)
+    message(STATUS "Building for non-iOS platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 project(cfc)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 在检测iOS平台的条件块之后添加
-if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    set(IOS_PLATFORM TRUE)
-    message(STATUS "Building for iOS platform")
-    
+# 设置包含路径
+if(IOS_PLATFORM)
     # iOS平台特定的包含路径设置
     set(GLOBAL_INCLUDE_DIRS
         ${libcimbar_SOURCE_DIR}/ios_includes
@@ -18,9 +41,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # 设置Xcode特定属性
     set(CMAKE_XCODE_ATTRIBUTE_HEADER_SEARCH_PATHS "${GLOBAL_INCLUDE_DIRS}")
 else()
-    set(IOS_PLATFORM FALSE)
-    message(STATUS "Building for non-iOS platform")
-    
     # 非iOS平台的包含路径保持不变
     set(GLOBAL_INCLUDE_DIRS
         ${libcimbar_SOURCE_DIR}/src/lib

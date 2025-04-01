@@ -38,3 +38,4 @@ fastlane/test_output/
 # Custom
 *.log
 *.swp
+CameraFileCopy/build-ios
