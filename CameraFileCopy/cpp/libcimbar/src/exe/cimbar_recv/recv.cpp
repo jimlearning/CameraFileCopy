@@ -12,22 +12,59 @@
 #include <GLFW/glfw3.h>
 #include <opencv2/videoio.hpp>
 
-#include <chrono>
+// 平台特定代码
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+    // iOS平台使用POSIX API
+    #include <unistd.h>     // 用于usleep
+    #include <sys/time.h>   // 用于gettimeofday
+#else
+    // 非iOS平台使用标准C++库
+    #include <chrono>
+    #include <thread>
+#endif
+
 #include <iostream>
 #include <string>
-#include <thread>
 using std::string;
 
 namespace {
 
-	template <typename TP>
-	TP wait_for_frame_time(unsigned delay, const TP& start)
+// 获取当前时间（毫秒）
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+	// iOS平台使用gettimeofday
+	inline uint64_t get_current_time_millis()
 	{
-		unsigned millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
-		if (delay > millis)
-			std::this_thread::sleep_for(std::chrono::milliseconds(delay-millis));
-		return std::chrono::high_resolution_clock::now();
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		return (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
 	}
+#else
+	// 非iOS平台使用chrono
+	inline uint64_t get_current_time_millis()
+	{
+		using namespace std::chrono;
+		return (uint64_t)duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+	}
+#endif
+
+// 统一的帧延迟函数
+inline uint64_t wait_for_frame_time(uint32_t delay, uint64_t start_time)
+{
+	uint64_t current_time = get_current_time_millis();
+	uint64_t elapsed = current_time - start_time;
+	
+	if (delay > elapsed) {
+		uint32_t wait_time = (uint32_t)(delay - elapsed);
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+		// iOS平台使用usleep
+		usleep(wait_time * 1000); // 转换为微秒
+#else
+		// 非iOS平台使用std::this_thread::sleep_for
+		std::this_thread::sleep_for(std::chrono::milliseconds(wait_time));
+#endif
+	}
+	
+	return get_current_time_millis();
 }
 
 
@@ -113,7 +150,8 @@ int main(int argc, char** argv)
 	cv::Mat mat;
 
 	unsigned count = 0;
-	std::chrono::time_point start = std::chrono::high_resolution_clock::now();
+	// 使用统一的计时API
+	uint64_t start = get_current_time_millis();
 	while (true)
 	{
 		++count;

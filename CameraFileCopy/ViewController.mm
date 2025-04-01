@@ -5,9 +5,6 @@
 //  Created by Jim Learning on 2025/3/26.
 //
 
-#import "ViewController.h"
-#import <Photos/Photos.h> // 用于请求权限
-
 // 包含 OpenCV 和 C++ 包装器头文件
 // 使用 #ifdef __cplusplus 确保 C++ 代码只在 .mm 文件中编译
 #ifdef __cplusplus
@@ -15,6 +12,9 @@
 #import <opencv2/imgcodecs/ios.h> // 可能需要用于 Mat <-> UIImage 转换（虽然这里没直接用）
 #include "cfc_wrapper.hpp" // 包含你的 C++ 接口头文件
 #endif
+
+#import "ViewController.h"
+#import <Photos/Photos.h> // 用于请求权限
 
 @interface ViewController ()
 // 私有属性或方法可以放在这里

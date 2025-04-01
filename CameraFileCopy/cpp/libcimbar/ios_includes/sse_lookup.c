@@ -63,7 +63,20 @@ void oct_lookup_destroy(oct_lookup_t octs) {
 }
 
 void oct_lookup_fill_distance(oct_lookup_t octs, distance_t *distances) {
-    // 空实现
+    // iOS平台替代实现 - 直接往每个键位置写入相应的距离值
+    // 这不是高效的实现，但在iOS平台上可用
+    if (!octs.keys || !octs.outputs || !distances) {
+        return; // 安全检查
+    }
+
+    for (size_t i = 0; i < octs.keys; i++) {
+        // 对于每个键值，根据octs查找表定位对应的输出
+        unsigned int output_idx = octs.outputs[i] & octs.output_mask;
+        if (output_idx < octs.outputs_len) {
+            // 写入距离值到相应的输出位置
+            octs.distances[i] = distances[output_idx];
+        }
+    }
 }
 
 #ifdef __cplusplus

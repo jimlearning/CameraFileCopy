@@ -3020,7 +3020,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# 第一次运行需要先在 Terminal 里运行 chmod +x your-real-path/build_cpp.sh\n# chmod +x \"$PROJECT_DIR/build_cpp.sh\"\n# chmod u+x $PROJECT_DIR/build_cpp.sh\n$PROJECT_DIR/build_cpp.sh\n";
+			shellScript = "# 第一次运行需要先在 Terminal 里运行 chmod +x your-real-path/build_cpp.sh\n# chmod +x \"$PROJECT_DIR/build_cpp.sh\"\n# chmod u+x $PROJECT_DIR/build_cpp.sh\n$PROJECT_DIR/CameraFileCopy/build_ios.sh --build\n";
 		};
 		47BBA069A94B0C663EEE1954 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;

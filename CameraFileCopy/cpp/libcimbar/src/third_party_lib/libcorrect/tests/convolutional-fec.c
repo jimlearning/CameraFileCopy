@@ -7,6 +7,7 @@
 
 #include "correct.h"
 #include "correct/util/error-sim-fec.h"
+#include "fec_shim.h"
 
 size_t max_block_len = 4096;
 

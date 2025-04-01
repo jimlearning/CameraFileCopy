@@ -1,0 +1,25 @@
+/* 线程兼容性全局头文件
+ * 这个头文件会替代系统的<thread>，在不同平台上提供适当的实现
+ */
+#pragma once
+
+#if defined(__APPLE__) && defined(CIMBAR_IOS_PLATFORM)
+  // iOS平台: 使用我们自己的线程兼容层
+  #include "ios_compat/thread.h"
+  
+  // 以下提供明确的using定义，避免使用using namespace
+  // 这样可以避免命名空间污染
+  namespace std {
+    using ios_compat::thread;
+    
+    namespace this_thread {
+      using ios_compat::this_thread::get_id;
+      using ios_compat::this_thread::yield;
+      using ios_compat::this_thread::sleep_for;
+      using ios_compat::this_thread::sleep_until;
+    }
+  }
+#else
+  // 非iOS平台: 使用标准线程库
+  #include <thread>
+#endif

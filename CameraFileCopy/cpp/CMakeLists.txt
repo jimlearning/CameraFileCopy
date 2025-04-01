@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.4.1)
 
+# 统一控制测试编译
+if(CIMBAR_IOS_PLATFORM)
+    set(BUILD_TESTING OFF CACHE BOOL "Disable testing for iOS" FORCE)
+endif()
+
 # 检查是否使用ios-cmake工具链
 if(DEFINED CMAKE_TOOLCHAIN_FILE)
     message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
@@ -56,19 +61,19 @@ include_directories(
 
 # OpenCV配置 - 强化配置以确保所有子项目都能找到OpenCV
 set(OpenCV_FOUND TRUE)
-set(OpenCV_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/../../../Pods/OpenCV/opencv2.framework/Headers")
+set(OpenCV_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/../Pods/OpenCV/opencv2.framework/Headers")
 set(OpenCV_LIBS "-framework opencv2")
 
 # 添加预处理器定义，将opencv2.framework/Headers作为根目录
 add_compile_options(-I${OpenCV_INCLUDE_DIRS})
 add_compile_definitions(HAVE_OPENCV)
 
-# 项目文件设置
+# 项目文件设置s
 set(DISABLE_TESTS true)
 set(OPENCV_LIBS ${OpenCV_LIBS})
 
 # 向所有子模块传播OpenCV路径
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -F${CMAKE_CURRENT_SOURCE_DIR}/../../../Pods/OpenCV")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -F${CMAKE_CURRENT_SOURCE_DIR}/../Pods/OpenCV")
 
 # 导入子项目
 set(PROJECTS

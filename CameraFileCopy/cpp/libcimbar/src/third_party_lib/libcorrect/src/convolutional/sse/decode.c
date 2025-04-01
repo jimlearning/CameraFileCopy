@@ -1,4 +1,9 @@
 #include "correct/convolutional/sse/convolutional.h"
+#ifndef CIMBAR_IOS_PLATFORM
+#include <arm_neon.h>
+#else
+#include "sse_compat.h"
+#endif
 
 static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, unsigned int sets,
                                            const uint8_t *soft) {
@@ -74,10 +79,20 @@ static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, 
             // low and low_plus_one share low_past_error
             //   note that they are the same when shifted right by 1
             // same goes for high and high_plus_one
-            __m128i past_shuffle_mask =
-                _mm_set_epi32(0x07060706, 0x05040504, 0x03020302, 0x01000100);
-            __m128i hist_mask =
-                _mm_set_epi32(0x80808080, 0x80808080, 0x0e0c0a09, 0x07050301);
+            uint8_t past_shuffle_mask_data[] = {0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
+            uint8x16_t past_shuffle_mask = vld1q_u8((const uint8_t*)past_shuffle_mask_data);
+
+            uint8_t hist_mask_data[] = {0x07, 0x05, 0x03, 0x01, 0x0e, 0x0c, 0x0a, 0x09, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08};
+            uint8x16_t hist_mask = vld1q_u8((const uint8_t*)hist_mask_data);
+            
+            uint32x4_t low_past_error =
+                vld1q_u32((const uint32_t *)(read_errors + base + base_offset));
+            
+            // 修正函数调用
+            low_past_error = vqtbl1q_u8(low_past_error, past_shuffle_mask);
+
+            // 修正指针类型
+            __m128i *table = (uint8x16_t *)oct_lookup.table;
 
             // the loop below calculates 64 register states per loop iteration
             // it does this by packing the 128-bit xmm registers with 8, 16-bit
@@ -92,41 +107,38 @@ static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, 
                  offset += 32, base_offset += 16) {
                 // load the past error for the register states with the high
                 // order bit cleared
-                __m128i low_past_error =
-                    _mm_loadl_epi64((const __m128i *)(read_errors + base + base_offset));
-                __m128i low_past_error0 =
-                    _mm_loadl_epi64((const __m128i *)(read_errors + base + base_offset + 4));
-                __m128i low_past_error1 =
-                    _mm_loadl_epi64((const __m128i *)(read_errors + base + base_offset + 8));
-                __m128i low_past_error2 =
-                    _mm_loadl_epi64((const __m128i *)(read_errors + base + base_offset + 12));
+                uint32x4_t low_past_error =
+                    vld1q_u32((const uint32_t *)(read_errors + base + base_offset));
+                uint32x4_t low_past_error0 =
+                    vld1q_u32((const uint32_t *)(read_errors + base + base_offset + 4));
+                uint32x4_t low_past_error1 =
+                    vld1q_u32((const uint32_t *)(read_errors + base + base_offset + 8));
+                uint32x4_t low_past_error2 =
+                    vld1q_u32((const uint32_t *)(read_errors + base + base_offset + 12));
 
                 // shuffle the low past error
                 // register states that differ only by their low order bit share
                 // a past error
-                low_past_error = _mm_shuffle_epi8(low_past_error, past_shuffle_mask);
-                low_past_error0 = _mm_shuffle_epi8(low_past_error0, past_shuffle_mask);
-                low_past_error1 = _mm_shuffle_epi8(low_past_error1, past_shuffle_mask);
-                low_past_error2 = _mm_shuffle_epi8(low_past_error2, past_shuffle_mask);
+                low_past_error = vqtbl1q_u8(low_past_error, past_shuffle_mask);
+                low_past_error0 = vqtbl1q_u8(low_past_error0, past_shuffle_mask);
+                low_past_error1 = vqtbl1q_u8(low_past_error1, past_shuffle_mask);
+                low_past_error2 = vqtbl1q_u8(low_past_error2, past_shuffle_mask);
 
                 // repeat past error lookup for register states with high order
                 // bit set
-                __m128i high_past_error =
-                    _mm_loadl_epi64((const __m128i *)(read_errors + highbase + base + base_offset));
-                __m128i high_past_error0 = _mm_loadl_epi64(
-                    (const __m128i *)(read_errors + highbase + base + base_offset + 4));
-                __m128i high_past_error1 = _mm_loadl_epi64(
-                    (const __m128i *)(read_errors + highbase + base + base_offset + 8));
-                __m128i high_past_error2 = _mm_loadl_epi64(
-                    (const __m128i *)(read_errors + highbase + base + base_offset + 12));
+                uint32x4_t high_past_error =
+                    vld1q_u32((const uint32_t *)(read_errors + highbase + base + base_offset));
+                uint32x4_t high_past_error0 = vld1q_u32(
+                    (const uint32_t *)(read_errors + highbase + base + base_offset + 4));
+                uint32x4_t high_past_error1 = vld1q_u32(
+                    (const uint32_t *)(read_errors + highbase + base + base_offset + 8));
+                uint32x4_t high_past_error2 = vld1q_u32(
+                    (const uint32_t *)(read_errors + highbase + base + base_offset + 12));
 
-                high_past_error = _mm_shuffle_epi8(high_past_error, past_shuffle_mask);
-                high_past_error0 = _mm_shuffle_epi8(high_past_error0, past_shuffle_mask);
-                high_past_error1 = _mm_shuffle_epi8(high_past_error1, past_shuffle_mask);
-                high_past_error2 = _mm_shuffle_epi8(high_past_error2, past_shuffle_mask);
-
-                // __m128i this_shuffle_mask = (__m128i){0x80800100, 0x80800302,
-                // 0x80800504, 0x80800706};
+                high_past_error = vqtbl1q_u8(high_past_error, past_shuffle_mask);
+                high_past_error0 = vqtbl1q_u8(high_past_error0, past_shuffle_mask);
+                high_past_error1 = vqtbl1q_u8(high_past_error1, past_shuffle_mask);
+                high_past_error2 = vqtbl1q_u8(high_past_error2, past_shuffle_mask);
 
                 // load the opaque oct distance table keys from out loop index
                 distance_oct_key_t low_key = oct_lookup.keys[oct + (base_offset / 4)];
@@ -136,20 +148,20 @@ static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, 
 
                 // load the distances for the register states with high order
                 // bit cleared
-                __m128i low_this_error =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + low_key));
-                __m128i low_this_error0 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + low_key0));
-                __m128i low_this_error1 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + low_key1));
-                __m128i low_this_error2 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + low_key2));
+                uint16x8_t low_this_error =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + low_key));
+                uint16x8_t low_this_error0 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + low_key0));
+                uint16x8_t low_this_error1 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + low_key1));
+                uint16x8_t low_this_error2 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + low_key2));
 
                 // add the distance for this time slice to the past distances
-                __m128i low_error = _mm_add_epi16(low_past_error, low_this_error);
-                __m128i low_error0 = _mm_add_epi16(low_past_error0, low_this_error0);
-                __m128i low_error1 = _mm_add_epi16(low_past_error1, low_this_error1);
-                __m128i low_error2 = _mm_add_epi16(low_past_error2, low_this_error2);
+                uint16x8_t low_error = vaddq_u16(low_past_error, low_this_error);
+                uint16x8_t low_error0 = vaddq_u16(low_past_error0, low_this_error0);
+                uint16x8_t low_error1 = vaddq_u16(low_past_error1, low_this_error1);
+                uint16x8_t low_error2 = vaddq_u16(low_past_error2, low_this_error2);
 
                 // repeat oct distance table lookup for registers with high
                 // order bit set
@@ -162,33 +174,33 @@ static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, 
                 distance_oct_key_t high_key2 =
                     oct_lookup.keys[oct_highbase + oct + (base_offset / 4) + 3];
 
-                __m128i high_this_error =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + high_key));
-                __m128i high_this_error0 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + high_key0));
-                __m128i high_this_error1 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + high_key1));
-                __m128i high_this_error2 =
-                    _mm_load_si128((const __m128i *)(oct_lookup.distances + high_key2));
+                uint16x8_t high_this_error =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + high_key));
+                uint16x8_t high_this_error0 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + high_key0));
+                uint16x8_t high_this_error1 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + high_key1));
+                uint16x8_t high_this_error2 =
+                    vld1q_u16((const uint16_t *)(oct_lookup.distances + high_key2));
 
-                __m128i high_error = _mm_add_epi16(high_past_error, high_this_error);
-                __m128i high_error0 = _mm_add_epi16(high_past_error0, high_this_error0);
-                __m128i high_error1 = _mm_add_epi16(high_past_error1, high_this_error1);
-                __m128i high_error2 = _mm_add_epi16(high_past_error2, high_this_error2);
+                uint16x8_t high_error = vaddq_u16(high_past_error, high_this_error);
+                uint16x8_t high_error0 = vaddq_u16(high_past_error0, high_this_error0);
+                uint16x8_t high_error1 = vaddq_u16(high_past_error1, high_this_error1);
+                uint16x8_t high_error2 = vaddq_u16(high_past_error2, high_this_error2);
 
                 // distances for this time slice calculated
 
                 // find the least error between registers who differ only in
                 // their high order bit
-                __m128i min_error = _mm_min_epu16(low_error, high_error);
-                __m128i min_error0 = _mm_min_epu16(low_error0, high_error0);
-                __m128i min_error1 = _mm_min_epu16(low_error1, high_error1);
-                __m128i min_error2 = _mm_min_epu16(low_error2, high_error2);
+                uint16x8_t min_error = vminq_u16(low_error, high_error);
+                uint16x8_t min_error0 = vminq_u16(low_error0, high_error0);
+                uint16x8_t min_error1 = vminq_u16(low_error1, high_error1);
+                uint16x8_t min_error2 = vminq_u16(low_error2, high_error2);
 
-                _mm_store_si128((__m128i *)(write_errors + low + offset), min_error);
-                _mm_store_si128((__m128i *)(write_errors + low + offset + 8), min_error0);
-                _mm_store_si128((__m128i *)(write_errors + low + offset + 16), min_error1);
-                _mm_store_si128((__m128i *)(write_errors + low + offset + 24), min_error2);
+                vst1q_u16((uint16_t *)(write_errors + low + offset), min_error);
+                vst1q_u16((uint16_t *)(write_errors + low + offset + 8), min_error0);
+                vst1q_u16((uint16_t *)(write_errors + low + offset + 16), min_error1);
+                vst1q_u16((uint16_t *)(write_errors + low + offset + 24), min_error2);
 
                 // generate history bits as (low_error > least_error)
                 // this operation fills each element with all 1s if true and 0s
@@ -196,27 +208,27 @@ static void convolutional_sse_decode_inner(correct_convolutional_sse *sse_conv, 
                 // in other words, we set the history bit to 1 if
                 //      the register state with high order bit set was the least
                 //      error
-                __m128i hist = _mm_cmpgt_epi16(low_error, min_error);
+                uint8x16_t hist = vcgtq_u16(low_error, min_error);
                 // pack the bits down from 16-bit wide to 8-bit wide to
                 // accomodate history table
-                hist = _mm_shuffle_epi8(hist, hist_mask);
+                hist = vtbl4q_u8(hist, hist_mask);
 
-                __m128i hist0 = _mm_cmpgt_epi16(low_error0, min_error0);
-                hist0 = _mm_shuffle_epi8(hist0, hist_mask);
+                uint8x16_t hist0 = vcgtq_u16(low_error0, min_error0);
+                hist0 = vtbl4q_u8(hist0, hist_mask);
 
-                __m128i hist1 = _mm_cmpgt_epi16(low_error1, min_error1);
-                hist1 = _mm_shuffle_epi8(hist1, hist_mask);
+                uint8x16_t hist1 = vcgtq_u16(low_error1, min_error1);
+                hist1 = vtbl4q_u8(hist1, hist_mask);
 
-                __m128i hist2 = _mm_cmpgt_epi16(low_error2, min_error2);
-                hist2 = _mm_shuffle_epi8(hist2, hist_mask);
+                uint8x16_t hist2 = vcgtq_u16(low_error2, min_error2);
+                hist2 = vtbl4q_u8(hist2, hist_mask);
 
                 // write the least error so that the next time slice sees it as
                 // the past error
                 // store the history bits set by cmp and shuffle operations
-                _mm_storel_epi64((__m128i *)(history + low + offset), hist);
-                _mm_storel_epi64((__m128i *)(history + low + offset + 8), hist0);
-                _mm_storel_epi64((__m128i *)(history + low + offset + 16), hist1);
-                _mm_storel_epi64((__m128i *)(history + low + offset + 24), hist2);
+                vst1q_u8((uint8_t *)(history + low + offset), hist);
+                vst1q_u8((uint8_t *)(history + low + offset + 8), hist0);
+                vst1q_u8((uint8_t *)(history + low + offset + 16), hist1);
+                vst1q_u8((uint8_t *)(history + low + offset + 24), hist2);
             }
         }
 
